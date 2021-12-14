@@ -64,7 +64,8 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
     foldername = pwd;
     matfilelist    = dir(fullfile(foldername,'ID*.mat'));
-    Treadmill_Data = load(fullfile(foldername,matfilelist(1).name)).Data;
+    Treadmill_Data = load(fullfile(foldername,matfilelist(1).name));
+    Treadmill_Data = Treadmill_Data.Data;
     cd(ori);
 
 %% Fluorescence 
