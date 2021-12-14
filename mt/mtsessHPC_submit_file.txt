@@ -7,4 +7,6 @@
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
-# matlab2019a -nojvm -nodisplay -nosplash -r "addpath ~/matlab/Github/Hippocampus; addpath(genpath('~/matlab/Github/DPV')); addpath ~/matlab/Github/npy-matlab-master/npy-matlab; mtsess('auto','redo','save')"
+#Submit in session directory
+
+# matlab2019a -nojvm -nodisplay -nosplash -r "addpath ~/matlab/Github/Hippocampus; addpath(genpath('~/matlab/Github/DPV')); addpath ~/matlab/Github/npy-matlab-master/npy-matlab; mtsess('auto','redo','save'); cd cells; mt_createCellsList;"
