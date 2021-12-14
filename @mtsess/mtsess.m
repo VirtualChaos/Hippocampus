@@ -409,6 +409,8 @@ for i = 1:5 %nNeuron
     cd(ori2)
 end
 
+cd(ori)
+
 else
 	% create empty object
 	obj = createEmptyObject(Args);
