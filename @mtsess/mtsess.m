@@ -81,8 +81,10 @@ Fbase0                =  Fbase_raw(iscellno,:);
 dF_F0                 =  double(Fc0./Fbase0);
 spikes0               =  spikes_raw(iscellno,:);  
 [nNeuron, nImg]       =  size(F0);
-spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat')).spikes0_corrected;
-dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat')).dF_F0_corrected;
+spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat'));
+spikes0_corrected = spikes0_corrected.spikes0_corrected;
+dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat'));
+dF_F0_corrected_ = dF_F0_corrected_.dF_F0_corrected;
 %% Treadmill data
 water0                =  Treadmill_Data.Water_real;
 pos_cum0              =  Treadmill_Data.Distance_real;
