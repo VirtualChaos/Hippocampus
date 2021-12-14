@@ -70,7 +70,8 @@ if(~isempty(dir(Args.RequiredFile)))
     sessionData = mtsess('Auto', varargin{:});
     sessionData = sessionData.data;
     cd(ori);
-    spiketimes = load(Args.RequiredFile).spiketimes;
+    spiketimes = load(Args.RequiredFile);
+    spiketimes = spiketimes.spiketimes;
     
     % Determine alpha value
     
