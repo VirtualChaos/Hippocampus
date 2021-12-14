@@ -67,13 +67,14 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
     data.origin = {pwd};
     cd ../..
-    sessionData = mtsess('Auto', varargin{:}).data;
+    sessionData = mtsess('Auto', varargin{:});
+    sessionData = sessionData.data;
     cd(ori);
     spiketimes = load(Args.RequiredFile).spiketimes;
     
     % Determine alpha value
     
-    alpha_values = 10:10:20;
+    alpha_values = 10:10:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
