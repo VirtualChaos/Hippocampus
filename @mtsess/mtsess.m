@@ -141,7 +141,7 @@ F                                =    F0(:,ok);
 Fc                               =    Fc0(:,ok);
 
 clear Timestamp_res ResStr ResEnd ResStr1 ResEnd1 s0 e0 s e
-clear Imgstate0 Imgstate Imgstate1 s1 Imgstate2 s2 tsFindex0 tsFindex1 usedtrialNo ok tsFindex F0 Fc0
+clear Imgstate0 Imgstate Imgstate1 s1 Imgstate2 s2 tsFindex0 tsFindex1 usedtrialNo ok F0 Fc0
 
 % Save data
 data.F = F;
@@ -152,7 +152,7 @@ data.spikes_corrected = spikes_corrected;
 % data.dF_F0 = dF_F0;
 data.dF_F0_corrected = dF_F0_corrected;
 
-clear F Fc tsF spikes_corrected dF_F0_corrected spikes0_corrected dF_F0_corrected_
+clear F Fc tsF dF_F0_corrected spikes0_corrected dF_F0_corrected_
 
 %% Session Data
 
