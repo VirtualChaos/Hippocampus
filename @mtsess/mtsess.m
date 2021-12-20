@@ -63,29 +63,33 @@ if(~isempty(dir(Args.RequiredFile)))
     ori = pwd;
     data.origin = {pwd};
     foldername = pwd;
-    matfilelist    = dir(fullfile(foldername,'ID*.mat'));
-    Treadmill_Data = load(fullfile(foldername,matfilelist(1).name));
-    Treadmill_Data = Treadmill_Data.Data;
     cd(ori);
 
 %% Fluorescence 
 F_raw                 =  double(readNPY(fullfile(foldername,'F.npy')));
-spikes_raw            =  double(readNPY(fullfile(foldername,'spks.npy')));
+% spikes_raw            =  double(readNPY(fullfile(foldername,'spks.npy')));
 iscell                =  double(readNPY(fullfile(foldername,'iscell.npy')));
 Fc_raw                =  double(readNPY(fullfile(foldername,'Fc.npy')));
-Fbase_raw             =  double(readNPY(fullfile(foldername,'Fbase.npy')));
+% Fbase_raw             =  double(readNPY(fullfile(foldername,'Fbase.npy')));
 iscellno              =  find(iscell(:,1)==1);
+
 F0                    =  F_raw(iscellno,:);
+clear F_raw
 Fc0                   =  Fc_raw(iscellno,:);
-Fbase0                =  Fbase_raw(iscellno,:);
-dF_F0                 =  double(Fc0./Fbase0);
-spikes0               =  spikes_raw(iscellno,:);  
+clear Fc_raw
+% Fbase0                =  Fbase_raw(iscellno,:);
+% dF_F0                 =  double(Fc0./Fbase0);
+% spikes0               =  spikes_raw(iscellno,:);  
 [nNeuron, nImg]       =  size(F0);
 spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat'));
 spikes0_corrected = spikes0_corrected.spikes0_corrected;
 dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat'));
 dF_F0_corrected_ = dF_F0_corrected_.dF_F0_corrected;
 %% Treadmill data
+matfilelist    = dir(fullfile(foldername,'ID*.mat'));
+Treadmill_Data = load(fullfile(foldername,matfilelist(1).name));
+Treadmill_Data = Treadmill_Data.Data;
+
 water0                =  Treadmill_Data.Water_real;
 pos_cum0              =  Treadmill_Data.Distance_real;
 lick                  =  Treadmill_Data.Lick > 3.3; % Use 3.3 as threshold
@@ -99,11 +103,13 @@ for      i     =  1 : (size(watertimes)-1)
     pos_trial0((watertimes(i)+1):watertimes(i+1))  =  pos_tmp;
     pos_trial0_normalized((watertimes(i)+1):watertimes(i+1)) = (pos_tmp-min(pos_tmp))/(max(pos_tmp)-min(pos_tmp)); 
 end
+clear water0 pos_trial0 pos_tmp
 %% Match Timestamp_treadmill with Timestamp_res
 Timestamp_treadmill   =  Treadmill_Data.Timestamp_real;
 Timestamp_res         =  Treadmill_Data.Timestamp_resonant_syn;
 ResStr                =  Treadmill_Data.Resonant_start;
 ResEnd                =  Treadmill_Data.Resonant_End;
+clear Treadmill_Data
 ResStr1               =  circshift(ResStr,-1);
 ResEnd1               =  circshift(ResEnd,-1);
 % Finding timestamps of peaks
@@ -128,11 +134,25 @@ ok                               =    (tsFindex1>=(watertimes(1)+1) & tsFindex1<
 tsFindex                         =    tsFindex1( ok );
 
 tsF                              =    Timestamp_treadmill(tsFindex);
-spikes                           =    spikes0(:,ok);
+% spikes                           =    spikes0(:,ok);
 spikes_corrected                 =    spikes0_corrected(:,ok);
 dF_F0_corrected                  =    dF_F0_corrected_(:,ok);
 F                                =    F0(:,ok);
 Fc                               =    Fc0(:,ok);
+
+clear Timestamp_res ResStr ResEnd ResStr1 ResEnd1 s0 e0 s e
+clear Imgstate0 Imgstate Imgstate1 s1 Imgstate2 s2 tsFindex0 tsFindex1 usedtrialNo ok tsFindex F0 Fc0
+
+% Save data
+data.F = F;
+data.Fc = Fc;
+data.tsF = tsF;
+% data.spikes = spikes;
+data.spikes_corrected = spikes_corrected;
+% data.dF_F0 = dF_F0;
+data.dF_F0_corrected = dF_F0_corrected;
+
+clear F Fc tsF spikes_corrected dF_F0_corrected spikes0_corrected dF_F0_corrected_
 
 %% Session Data
 
@@ -163,6 +183,8 @@ exclude_zero_trials_idx = find(session_data_raw(:,2) ~= 0);
 session_data_exclude_zero_trials = session_data_raw(exclude_zero_trials_idx, :);
 actual_start_time = session_data_exclude_zero_trials(1,1);
 session_data_exclude_zero_trials(:,1) = session_data_exclude_zero_trials(:,1) - actual_start_time; % Adjust start time
+
+clear trialNo pos_trial_bin new_binNo water lick pos_trial0_normalized pos_cum0
 
 % data_bin
 for i = 1:(nTrials * BinSize)
@@ -294,6 +316,11 @@ end
 
 % figure; histogram(velocity_averaged_(:,4)); title('Velocity Distribution'); xlabel('Velocity (cm/s)'); ylabel('Count');
 
+data.session_data_raw = session_data_raw;
+
+clear session_data_raw exclude_zero_trials_idx
+clear velocity velocity_padded velocity_averaged velocity_averaged_filt acceleration acceleration_padded acceleration_averaged
+
 % Licking and Water
 % figure; plot(session_data_exclude_zero_trials(:,1), session_data_exclude_zero_trials(:,5)*2, 'b'); xlabel('Time (s)');% xline(data_trial(:,3));
 % hold on
@@ -331,6 +358,8 @@ edges = floor(min(lick_timestamps_adjusted)):0.5:ceil(max(lick_timestamps_adjust
 % Bin distribution of licks
 % figure; histogram(lick_timestamps_spliced(:,2), 1:101); title('Bin distribution of licks'); xlabel('Bin No.');
 
+clear lick_count lick_count_vel_filt
+
 lick_count_binned = zeros(BinSize*nTrials,1);
 for i =  1:(BinSize*nTrials)
     temp_arr = lick_timestamps(find(lick_timestamps(:,4) == i)); %Count licks per bin
@@ -360,7 +389,6 @@ data.nTrials = nTrials;
 data.nNeuron = nNeuron;
 data.data_bin = data_bin;
 data.data_trial = data_trial;
-data.session_data_raw = session_data_raw;
 data.session_data_exclude_zero_trials = session_data_exclude_zero_trials;
 data.sessionMidpoint = sessionMidpoint;
 data.actual_start_time = actual_start_time;
@@ -370,13 +398,7 @@ data.lick_timestamps_spliced = lick_timestamps_spliced;
 data.lick_timestamps_adjusted = lick_timestamps_adjusted;
 data.lick_count_binned = lick_count_binned;
 data.lick_binned = lick_binned;
-data.tsF = tsF;
-data.spikes = spikes;
-data.spikes_corrected = spikes_corrected;
-data.dF_F0 = dF_F0;
-data.dF_F0_corrected = dF_F0_corrected;
-data.F = F;
-data.Fc = Fc;
+
 
 % create nptdata so we can inherit from it
 data.numSets = 0;
