@@ -1,9 +1,8 @@
 #!/bin/bash
 
 #PBS -P matlab
-#PBS -q serial
-#PBS -l select=1:ncpus=1:mem=2GB 
-#PBS -j oe
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=45GB 
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
