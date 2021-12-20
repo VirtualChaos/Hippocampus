@@ -11,7 +11,7 @@
         end
     end
     
-    writematrix(cells_list', 'cells_list.txt');
+    writematrix(cells_list, 'cells_list.txt');
     
 %     for cell_idx = 1:length(cells_list)
 %         
