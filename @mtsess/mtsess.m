@@ -414,7 +414,7 @@ cd cells
 
 ori2 = pwd;
 
-for i = 1:5 %nNeuron
+for i = 1:nNeuron
     cell_folderName = strcat('cell', num2str(i));
     mkdir(cell_folderName);
     cd(cell_folderName);

@@ -75,7 +75,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     % Determine alpha value
     
-    alpha_values = 10:10:20;
+    alpha_values = 10:10:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
