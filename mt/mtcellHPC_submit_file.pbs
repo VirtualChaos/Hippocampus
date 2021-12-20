@@ -1,12 +1,11 @@
-#!/bin/bash 
-  
+#!/bin/bash
+
 #PBS -P matlab
-#PBS -q serial
-#PBS -l select=1:ncpus=1:mem=10GB 
-#PBS -j oe
+#PBS -q short
+#PBS -l select=1:ncpus=1:mem=45GB 
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
-#Submit in cell directory
+#Submit in session directory
 
-matlab2019a -nojvm -nodisplay -nosplash -r "addpath ~/matlab/Github/Hippocampus; addpath(genpath('~/matlab/Github/DPV')); addpath ~/matlab/Github/npy-matlab-master/npy-matlab; mtcell('auto','redo','save')"
+matlab -batch "addpath ~/matlab/Github/Hippocampus; addpath ~/matlab/Github/Hippocampus/mt; addpath(genpath('~/matlab/Github/DPV')) ; addpath ~/matlab/Github/npy-matlab-master/npy-matlab; addpath ~/matlab/Github/newNpt; mtcell('auto','redo','save'); exit;"

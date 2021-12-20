@@ -75,7 +75,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     % Determine alpha value
     
-    alpha_values = 10:10:200;
+    alpha_values = 10:10:20;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
@@ -105,6 +105,8 @@ if(~isempty(dir(Args.RequiredFile)))
             conditions = conditions0 & (halving_markers==2);
             NumShuffles = 0;
         end
+        
+        clear halving_markers
 
         % spike shuffling
 
@@ -125,36 +127,14 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes = sortrows(flat_spiketimes);
 
         flat_spiketimes(flat_spiketimes(:,1) < sessionData.actual_start_time,:) = [];      
-        % disp('test');
-%         if Args.UseAllTrials == 0
-%             conditions = conditions & pv.data.good_trial_markers;
-%         end
-%       
-         if Args.ThresVel > 0
-             conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
-         end
-%         
-%         if Args.UseMinObs
-%             bins = pv.data.place_good_bins;
-%             conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
-%         else
-%             bins = 1:(Args.BinSize * Args.BinSize);
-%         end
+
+        clear full_arr temp
+        
+        if Args.ThresVel > 0
+            conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
+        end
 
         bins = 1:Args.BinSize;
-
-        % disp('conditioning done');
-%         dstc = diff(stc(:,1));
-%         stc_changing_ind0 = [1; find(dstc>0)+1; size(stc,1)];
-%         stc_changing_ind0(:,2) = [stc_changing_ind0(2:end)-1; nan];
-%         stc_changing_ind0 = stc_changing_ind0(1:end-1,:);
-%         if repeat == 1
-%             stc_changing_ind = stc_changing_ind0;
-%         elseif repeat == 2
-%             stc_changing_ind = stc_changing_ind0(halving_markers==1,:);
-%         elseif repeat == 3
-%             stc_changing_ind = stc_changing_ind0(halving_markers==2,:);
-%         end
 
         consol_arr = zeros(Args.BinSize, NumShuffles + 1);
         if repeat == 1
@@ -198,6 +178,8 @@ if(~isempty(dir(Args.RequiredFile)))
             binSpikeCount = reshape(binArr(:,1), [Args.BinSize,sessionData.nTrials])';
             binDuration = reshape(accumarray(stc_ss(:,1),stc_ss(:,3))', [Args.BinSize,sessionData.nTrials])';
         end
+        clear conditions0 conditions binArr flat_spiketimes stc stc_ss
+        
             if Args.AdaptiveSmooth
 
                 firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
@@ -254,6 +236,8 @@ if(~isempty(dir(Args.RequiredFile)))
 %                         break;
 %                     end
                 end
+                
+                clear possible
 
                 to_fill(isnan(to_fill)) = 0;
                 to_fill = permute(to_fill, [2 1]);
@@ -342,6 +326,8 @@ if(~isempty(dir(Args.RequiredFile)))
             conditions = conditions0 & (halving_markers==2);
             NumShuffles = 0;
         end
+        
+        clear halving_markers
 
         % spike shuffling
 
@@ -362,36 +348,14 @@ if(~isempty(dir(Args.RequiredFile)))
         flat_spiketimes = sortrows(flat_spiketimes);
 
         flat_spiketimes(flat_spiketimes(:,1) < sessionData.actual_start_time,:) = [];      
-        % disp('test');
-%         if Args.UseAllTrials == 0
-%             conditions = conditions & pv.data.good_trial_markers;
-%         end
-%       
-         if Args.ThresVel > 0
-             conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
-         end
-%         
-%         if Args.UseMinObs
-%             bins = pv.data.place_good_bins;
-%             conditions = conditions & (pv.data.pv_good_rows); % Make sure maps take into account both place and view filters
-%         else
-%             bins = 1:(Args.BinSize * Args.BinSize);
-%         end
+        
+        clear full_arr temp
+        
+        if Args.ThresVel > 0
+            conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
+        end
 
         bins = 1:Args.BinSize;
-
-        % disp('conditioning done');
-%         dstc = diff(stc(:,1));
-%         stc_changing_ind0 = [1; find(dstc>0)+1; size(stc,1)];
-%         stc_changing_ind0(:,2) = [stc_changing_ind0(2:end)-1; nan];
-%         stc_changing_ind0 = stc_changing_ind0(1:end-1,:);
-%         if repeat == 1
-%             stc_changing_ind = stc_changing_ind0;
-%         elseif repeat == 2
-%             stc_changing_ind = stc_changing_ind0(halving_markers==1,:);
-%         elseif repeat == 3
-%             stc_changing_ind = stc_changing_ind0(halving_markers==2,:);
-%         end
 
         consol_arr = zeros(Args.BinSize, NumShuffles + 1);
         if repeat == 1
@@ -435,6 +399,8 @@ if(~isempty(dir(Args.RequiredFile)))
             binSpikeCount = reshape(binArr(:,1), [Args.BinSize,sessionData.nTrials])';
             binDuration = reshape(accumarray(stc_ss(:,1),stc_ss(:,3))', [Args.BinSize,sessionData.nTrials])';
         end
+        clear conditions0 conditions binArr flat_spiketimes stc stc_ss
+        
             if Args.AdaptiveSmooth
 
                 firing_rates_full_raw = firing_counts_full./repmat(gpdur,size(firing_counts_full,1),1);
@@ -502,6 +468,8 @@ if(~isempty(dir(Args.RequiredFile)))
 %                         break;
 %                     end
                 end
+                
+                clear possible
 
                 to_fill(isnan(to_fill)) = 0;
                 to_fill = permute(to_fill, [2 1]);

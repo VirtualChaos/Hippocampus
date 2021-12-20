@@ -11,9 +11,13 @@ eval=$cmd1
 # n=$(n+1))
 # done
 
+cmd2="qsub ~/matlab/Github/Hippocampus/mt/mtcellHPC_submit_file.pbs"
+
 while read cell_no; do
 echo "$cell_no"
-cmd1="cd "
+cmd1="cd $cell_no"
 eval $cmd1
-"qsub "
+eval $cmd2
+cmd1="cd .."
+eval $cmd1
 done < "cells_list.txt"
