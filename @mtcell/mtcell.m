@@ -73,13 +73,13 @@ if(~isempty(dir(Args.RequiredFile)))
     spiketimes = load(Args.RequiredFile);
     spiketimes = spiketimes.spiketimes;
     
-    if isempty(spiketimes)
+    if ~isempty(spiketimes)
         spiketimes = 0;
     end
     
     % Determine alpha value
     
-    alpha_values = 10:20:200;
+    alpha_values = 20:20:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
@@ -304,7 +304,10 @@ if(~isempty(dir(Args.RequiredFile)))
     end
     
     data.alpha_sic_values = alpha_sic_values;
-    alpha = alpha_values(find(abs(alpha_sic_values(:,4)) == max(abs(alpha_sic_values(:,4)))));
+    alpha = alpha_values(find(abs(alpha_sic_values(:,4)) == max(abs(alpha_sic_values(:,4))), 1, 'first'));
+    if isempty(alpha)
+        alpha = 0;
+    end
     data.alpha = alpha;
     
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
