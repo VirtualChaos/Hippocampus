@@ -73,7 +73,7 @@ if(~isempty(dir(Args.RequiredFile)))
     spiketimes = load(Args.RequiredFile);
     spiketimes = spiketimes.spiketimes;
     
-    if ~isempty(spiketimes)
+    if isempty(spiketimes)
         spiketimes = 0;
     end
     
