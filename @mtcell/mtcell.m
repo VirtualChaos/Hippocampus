@@ -73,9 +73,13 @@ if(~isempty(dir(Args.RequiredFile)))
     spiketimes = load(Args.RequiredFile);
     spiketimes = spiketimes.spiketimes;
     
+    if isempty(spiketimes)
+        spiketimes = 0;
+    end
+    
     % Determine alpha value
     
-    alpha_values = 10:10:200;
+    alpha_values = 10:20:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
