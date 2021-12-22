@@ -304,7 +304,7 @@ if(~isempty(dir(Args.RequiredFile)))
     end
     
     data.alpha_sic_values = alpha_sic_values;
-    alpha = alpha_values(find(abs(alpha_sic_values(:,4)) == max(abs(alpha_sic_values(:,4))), 1, 'first'));
+    alpha = alpha_values(find(abs(alpha_sic_values(:,4)) == max(abs(alpha_sic_values(:,4)))));
     if isempty(alpha)
         alpha = 0;
     end
