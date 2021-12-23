@@ -81,7 +81,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     alpha_values = 20:20:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
-    parfor alpha_no = 1:size(alpha_values,2)
+    for alpha_no = 1:size(alpha_values,2)
         tic;
         alpha = alpha_values(alpha_no);
         fprintf('Alpha %d \n', alpha);
@@ -110,8 +110,7 @@ if(~isempty(dir(Args.RequiredFile)))
             NumShuffles = 0;
         end
         
-        %clear halving_markers
-        halving_markers = [];
+        clear halving_markers
 
         % spike shuffling
 
@@ -133,9 +132,7 @@ if(~isempty(dir(Args.RequiredFile)))
 
         flat_spiketimes(flat_spiketimes(:,1) < sessionData.actual_start_time,:) = [];      
 
-        %clear full_arr temp
-        full_arr = [];
-        temp = []
+        clear full_arr temp
         
         if Args.ThresVel > 0
             conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
@@ -185,13 +182,7 @@ if(~isempty(dir(Args.RequiredFile)))
             binSpikeCount = reshape(binArr(:,1), [Args.BinSize,sessionData.nTrials])';
             binDuration = reshape(accumarray(stc_ss(:,1),stc_ss(:,3))', [Args.BinSize,sessionData.nTrials])';
         end
-        %clear conditions0 conditions binArr flat_spiketimes stc stc_ss
-        conditions0 = [];
-        conditions = [];
-        binArr = [];
-        flat_spiketimes = [];
-        stc = [];
-        stc_ss = [];
+        clear conditions0 conditions binArr flat_spiketimes stc stc_ss
         
             if Args.AdaptiveSmooth
 
@@ -250,8 +241,7 @@ if(~isempty(dir(Args.RequiredFile)))
 %                     end
                 end
                 
-                %clear possible
-                possible = []
+                clear possible
 
                 to_fill(isnan(to_fill)) = 0;
                 to_fill = permute(to_fill, [2 1]);
@@ -306,13 +296,10 @@ if(~isempty(dir(Args.RequiredFile)))
 
         end
     
-%         alpha_sic_values(alpha_no, 1) = SIC;
-%         alpha_sic_values(alpha_no, 2) = mean(SICsh);
-%         alpha_sic_values(alpha_no, 3) = std(SICsh);
-%         alpha_sic_values(alpha_no, 4) = (SIC - mean(SICsh)) / std(SICsh); % z-score
-        
-        tempvar = [SIC, mean(SICsh), std(SICsh), (SIC - mean(SICsh)) / std(SICsh)];
-        alpha_sic_values(alpha_no,:) = tempvar;
+        alpha_sic_values(alpha_no, 1) = SIC;
+        alpha_sic_values(alpha_no, 2) = mean(SICsh);
+        alpha_sic_values(alpha_no, 3) = std(SICsh);
+        alpha_sic_values(alpha_no, 4) = (SIC - mean(SICsh)) / std(SICsh); % z-score
         toc;
     end
     
