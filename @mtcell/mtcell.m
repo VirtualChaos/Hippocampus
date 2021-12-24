@@ -135,7 +135,7 @@ if(~isempty(dir(Args.RequiredFile)))
         clear full_arr temp
         
         if Args.ThresVel > 0
-            conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
+            conditions = conditions & (sessionData.velocity_averaged(:,4) > Args.ThresVel);
         end
 
         bins = 1:Args.BinSize;
@@ -359,7 +359,7 @@ if(~isempty(dir(Args.RequiredFile)))
         clear full_arr temp
         
         if Args.ThresVel > 0
-            conditions = conditions & (sessionData.velocity_averaged_(:,4) > Args.ThresVel);
+            conditions = conditions & (sessionData.velocity_averaged(:,4) > Args.ThresVel);
         end
 
         bins = 1:Args.BinSize;
