@@ -317,6 +317,10 @@ end
 % figure; histogram(velocity_averaged_(:,4)); title('Velocity Distribution'); xlabel('Velocity (cm/s)'); ylabel('Count');
 
 data.session_data_raw = session_data_raw;
+data.velocity_averaged = velocity_averaged_;
+data.velocity_averaged_filt = velocity_averaged_filt;
+data.velocity_binned = velocity_binned;
+data.acceleration_averaged = acceleration_averaged
 
 clear session_data_raw exclude_zero_trials_idx
 clear velocity velocity_padded velocity_averaged velocity_averaged_filt acceleration acceleration_padded acceleration_averaged
@@ -392,7 +396,6 @@ data.data_trial = data_trial;
 data.session_data_exclude_zero_trials = session_data_exclude_zero_trials;
 data.sessionMidpoint = sessionMidpoint;
 data.actual_start_time = actual_start_time;
-data.velocity_binned = velocity_binned;
 data.lick_timestamps = lick_timestamps;
 data.lick_timestamps_spliced = lick_timestamps_spliced;
 data.lick_timestamps_adjusted = lick_timestamps_adjusted;
