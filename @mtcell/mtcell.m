@@ -79,11 +79,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     % Determine alpha value
     
-     profile on
-     n = 100;
-     M = magic(n);
-    
-    alpha_values = 20:20:20;
+    alpha_values = 20:20:200;
     alpha_sic_values = zeros(size(alpha_values, 2),4);
     for alpha_no = 1:size(alpha_values,2)
         tic;
@@ -174,7 +170,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 tbin_hit(~(tbin_hit>0)) = [];
             
                 binArr(tbin_hit,flat_spiketimes(sp,2)) = binArr(tbin_hit,flat_spiketimes(sp,2)) + 1;
-            end
+            end    
         end
         
         firing_counts_full = consol_arr';
@@ -313,10 +309,7 @@ if(~isempty(dir(Args.RequiredFile)))
         alpha = 0;
     end
     data.alpha = alpha;
-    
-    profile off
-    profsave
-    
+        
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
         
         % selecting rows from sessionTimeC
