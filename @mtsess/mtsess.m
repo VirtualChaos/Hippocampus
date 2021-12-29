@@ -418,7 +418,7 @@ cd cells
 ori2 = pwd;
 
 for i = 1:nNeuron
-    cell_folderName = strcat('cell', num2str(i));
+    cell_folderName = strcat('cell', num2str(sprintf('%04d',i)));
     mkdir(cell_folderName);
     cd(cell_folderName);
     spiketrain = spikes_corrected(i,:);
