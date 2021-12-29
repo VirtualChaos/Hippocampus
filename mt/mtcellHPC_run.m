@@ -4,13 +4,14 @@ ori = pwd;
 cells_list = string(importdata('cells_list.txt'));
 
 for cell_idx = 1:length(cells_list)
+   
+    if mod(cell_idx,20) == 0 || cell_idx == length(cells_list)
+        fprintf('Cell %d \n', cell_idx);
+        writetable(cell_idx, 'processingCellNo.txt')
+    end
     
     cell_no = cells_list(cell_idx);
     cd(strcat(ori, '/', cell_no));
-    
-    if mod(cell_idx,20) == 0
-        toc
-    end
     
     try
         mtcell('Auto', 'Save', 'Redo');
