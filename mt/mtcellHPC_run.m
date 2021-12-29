@@ -8,7 +8,7 @@ for cell_idx = 1:length(cells_list)
     cell_no = cells_list(cell_idx);
     cd(strcat(ori, '/', cell_no));
     
-    if mod(cell_idx,10) == 0
+    if mod(cell_idx,20) == 0
         toc
     end
     
