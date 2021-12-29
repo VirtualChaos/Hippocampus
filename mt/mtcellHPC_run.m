@@ -1,6 +1,7 @@
 % Control script is called from 'cells' directory;
 % cd into each 'cell' directory (e.g. cell0001) to call mtcell object
 ori = pwd;
+cells_list = string(importdata('cells_list.txt'));
 
 for cell_idx = 1:length(cells_list)
     
