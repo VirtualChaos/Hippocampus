@@ -8,7 +8,7 @@ for cell_idx = 1:length(cells_list)
     fprintf('Cell %d \n', cell_idx);
     
     if mod(cell_idx,20) == 0 || cell_idx == length(cells_list)
-        writetable(cell_idx, 'processingCellNo.txt')
+        writematrix(cell_idx, 'processingCellNo.txt')
     end
     
     cell_no = cells_list(cell_idx);
