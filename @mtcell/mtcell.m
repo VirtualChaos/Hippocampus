@@ -157,7 +157,7 @@ if(~isempty(dir(Args.RequiredFile)))
                     break;
                 end
                 interval = interval + 1;
-            end   
+            end
 
             bins_hit = stc(interval,3);
             bins_hit = bins_hit(logical(conditions(interval)));

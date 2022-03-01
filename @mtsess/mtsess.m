@@ -14,7 +14,7 @@ function [obj, varargout] = mtsess(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','ID*.mat', ...
+				'ObjectLevel','Session','RequiredFile','ID*.mat', 'NumericArguments', [], ...
 				'BinSize',100, 'ThresVel',0);
             
 Args.flags = {'Auto','ArgsOnly'};
@@ -316,6 +316,7 @@ end
 
 % figure; histogram(velocity_averaged_(:,4)); title('Velocity Distribution'); xlabel('Velocity (cm/s)'); ylabel('Count');
 
+data.TrialTime_idx = TrialTime_idx;
 data.session_data_raw = session_data_raw;
 data.velocity_averaged = velocity_averaged_;
 data.velocity_averaged_filt = velocity_averaged_filt;
@@ -360,7 +361,10 @@ edges = floor(min(lick_timestamps_adjusted)):0.5:ceil(max(lick_timestamps_adjust
 % figure; histogram(lick_timestamps_adjusted, edges); title('Time distribution of licks'); xlabel('Time (s)');
 
 % Bin distribution of licks
-% figure; histogram(lick_timestamps_spliced(:,2), 1:101); title('Bin distribution of licks'); xlabel('Bin No.');
+% figure; histogram(lick_timestamps_spliced(:,2), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
+
+data.lick_count = lick_count;
+data.lick_count_vel_filt = lick_count_vel_filt;
 
 clear lick_count lick_count_vel_filt
 
@@ -401,7 +405,6 @@ data.lick_timestamps_spliced = lick_timestamps_spliced;
 data.lick_timestamps_adjusted = lick_timestamps_adjusted;
 data.lick_count_binned = lick_count_binned;
 data.lick_binned = lick_binned;
-
 
 % create nptdata so we can inherit from it
 data.numSets = 0;

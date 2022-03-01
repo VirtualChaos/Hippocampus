@@ -9,9 +9,8 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'TrialVelRaw', 0, 'TrialVel',0, ...
-              'TrialVelFilt',0, 'VelBinned',0, 'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, ...
-              'LickDistribution',0, 'LickBinned',0, 'LickRate',0, 'TrialLick',0, 'LickRZ', 0);
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, ...
+              'BinFiringRate',0, 'Baseline',0, 'GMM',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -24,8 +23,8 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
-elseif (Args.TrialVelRaw | Args.TrialVel | Args.TrialVelFilt | Args.TrialWaterLick | Args.TrialLick)
-    r = obj.data.nTrials;
+elseif (Args.FiringRateMapRaw | Args.FiringRateMapAdSm | Args.BinFiringRate | Args.Baseline | Args.GMM)
+    r = length(fieldnames(obj.data.cellData));
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way
