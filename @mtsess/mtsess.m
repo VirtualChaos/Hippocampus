@@ -14,7 +14,7 @@ function [obj, varargout] = mtsess(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','ID*.mat', 'NumericArguments', [], ...
+				'ObjectLevel','Session','RequiredFile','ID*.mat', 'Spikes', 1, 'NumericArguments', [], ...
 				'BinSize',100, 'ThresVel',0);
             
 Args.flags = {'Auto','ArgsOnly'};
@@ -65,26 +65,6 @@ if(~isempty(dir(Args.RequiredFile)))
     foldername = pwd;
     cd(ori);
 
-%% Fluorescence 
-F_raw                 =  double(readNPY(fullfile(foldername,'F.npy')));
-% spikes_raw            =  double(readNPY(fullfile(foldername,'spks.npy')));
-iscell                =  double(readNPY(fullfile(foldername,'iscell.npy')));
-Fc_raw                =  double(readNPY(fullfile(foldername,'Fc.npy')));
-% Fbase_raw             =  double(readNPY(fullfile(foldername,'Fbase.npy')));
-iscellno              =  find(iscell(:,1)==1);
-
-F0                    =  F_raw(iscellno,:);
-clear F_raw
-Fc0                   =  Fc_raw(iscellno,:);
-clear Fc_raw
-% Fbase0                =  Fbase_raw(iscellno,:);
-% dF_F0                 =  double(Fc0./Fbase0);
-% spikes0               =  spikes_raw(iscellno,:);  
-[nNeuron, nImg]       =  size(F0);
-spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat'));
-spikes0_corrected = spikes0_corrected.spikes0_corrected;
-dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat'));
-dF_F0_corrected_ = dF_F0_corrected_.dF_F0_corrected;
 %% Treadmill data
 matfilelist    = dir(fullfile(foldername,'ID*.mat'));
 Treadmill_Data = load(fullfile(foldername,matfilelist(1).name));
@@ -110,49 +90,74 @@ Timestamp_res         =  Treadmill_Data.Timestamp_resonant_syn;
 ResStr                =  Treadmill_Data.Resonant_start;
 ResEnd                =  Treadmill_Data.Resonant_End;
 clear Treadmill_Data
-ResStr1               =  circshift(ResStr,-1);
-ResEnd1               =  circshift(ResEnd,-1);
-% Finding timestamps of peaks
-s0                    =  find(ResStr<2 & ResStr1 >2);
-e0                    =  find(ResEnd<2 & ResEnd1 >2);
-s                     =  s0(1:length(e0));
-e                     =  e0;
-Imgstate0             = zeros(length(Timestamp_res),1);
-for i = 1:length(e0)
-    Imgstate0(s(i):e(i)) = 5;
+
+if Args.Spikes
+    %% Fluorescence
+    F_raw                 =  double(readNPY(fullfile(foldername,'F.npy')));
+    % spikes_raw            =  double(readNPY(fullfile(foldername,'spks.npy')));
+    iscell                =  double(readNPY(fullfile(foldername,'iscell.npy')));
+    Fc_raw                =  double(readNPY(fullfile(foldername,'Fc.npy')));
+    % Fbase_raw             =  double(readNPY(fullfile(foldername,'Fbase.npy')));
+    iscellno              =  find(iscell(:,1)==1);
+    
+    F0                    =  F_raw(iscellno,:);
+    clear F_raw
+    Fc0                   =  Fc_raw(iscellno,:);
+    clear Fc_raw
+    % Fbase0                =  Fbase_raw(iscellno,:);
+    % dF_F0                 =  double(Fc0./Fbase0);
+    % spikes0               =  spikes_raw(iscellno,:);
+    [nNeuron, nImg]       =  size(F0);
+    spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat'));
+    spikes0_corrected = spikes0_corrected.spikes0_corrected;
+    dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat'));
+    dF_F0_corrected_ = dF_F0_corrected_.dF_F0_corrected;
+    
+    ResStr1               =  circshift(ResStr,-1);
+    ResEnd1               =  circshift(ResEnd,-1);
+    % Finding timestamps of peaks
+    s0                    =  find(ResStr<2 & ResStr1 >2);
+    e0                    =  find(ResEnd<2 & ResEnd1 >2);
+    s                     =  s0(1:length(e0));
+    e                     =  e0;
+    Imgstate0             = zeros(length(Timestamp_res),1);
+    for i = 1:length(e0)
+        Imgstate0(s(i):e(i)) = 5;
+    end
+    Imgstate                         =    interp1(Timestamp_res,  Imgstate0,   Timestamp_treadmill, 'linear');
+    Imgstate1                        =    circshift(Imgstate,-1);
+    s1                               =    find(Imgstate<2 & Imgstate1 >2);
+    Imgstate2                        =    circshift(Imgstate,1);
+    s2                               =    find(Imgstate<2 & Imgstate2 >2);
+    
+    tsFindex0                        =    round (s1 + 1/2 * (s2-s1)); %Time of Images
+    tsFindex1                        =    tsFindex0; %(1:nImg);
+    usedtrialNo                      =    length(watertimes);
+    ok                               =    (tsFindex1>=(watertimes(1)+1) & tsFindex1<=watertimes(usedtrialNo) ); % Filter out first/last half-trial
+    tsFindex                         =    tsFindex1( ok );
+    
+    tsF                              =    Timestamp_treadmill(tsFindex);
+    % spikes                           =    spikes0(:,ok);
+    spikes_corrected                 =    spikes0_corrected(:,ok);
+    dF_F0_corrected                  =    dF_F0_corrected_(:,ok);
+    F                                =    F0(:,ok);
+    Fc                               =    Fc0(:,ok);
+    
+    clear Timestamp_res ResStr ResEnd ResStr1 ResEnd1 s0 e0 s e
+    clear Imgstate0 Imgstate Imgstate1 s1 Imgstate2 s2 tsFindex0 tsFindex1 usedtrialNo ok F0 Fc0
+    
+    % Save data
+    data.nNeuron = nNeuron;
+    data.F = F;
+    data.Fc = Fc;
+    data.tsF = tsF;
+    % data.spikes = spikes;
+    data.spikes_corrected = spikes_corrected;
+    % data.dF_F0 = dF_F0;
+    data.dF_F0_corrected = dF_F0_corrected;
+    
+    clear F Fc tsF dF_F0_corrected spikes0_corrected dF_F0_corrected_
 end
-Imgstate                         =    interp1(Timestamp_res,  Imgstate0,   Timestamp_treadmill, 'linear');
-Imgstate1                        =    circshift(Imgstate,-1);
-s1                               =    find(Imgstate<2 & Imgstate1 >2);
-Imgstate2                        =    circshift(Imgstate,1);
-s2                               =    find(Imgstate<2 & Imgstate2 >2);
-
-tsFindex0                        =    round (s1 + 1/2 * (s2-s1)); %Time of Images
-tsFindex1                        =    tsFindex0; %(1:nImg);  
-usedtrialNo                      =    length(watertimes);
-ok                               =    (tsFindex1>=(watertimes(1)+1) & tsFindex1<=watertimes(usedtrialNo) ); % Filter out first/last half-trial 
-tsFindex                         =    tsFindex1( ok );
-
-tsF                              =    Timestamp_treadmill(tsFindex);
-% spikes                           =    spikes0(:,ok);
-spikes_corrected                 =    spikes0_corrected(:,ok);
-dF_F0_corrected                  =    dF_F0_corrected_(:,ok);
-F                                =    F0(:,ok);
-Fc                               =    Fc0(:,ok);
-
-clear Timestamp_res ResStr ResEnd ResStr1 ResEnd1 s0 e0 s e
-clear Imgstate0 Imgstate Imgstate1 s1 Imgstate2 s2 tsFindex0 tsFindex1 usedtrialNo ok F0 Fc0
-
-% Save data
-data.F = F;
-data.Fc = Fc;
-data.tsF = tsF;
-% data.spikes = spikes;
-data.spikes_corrected = spikes_corrected;
-% data.dF_F0 = dF_F0;
-data.dF_F0_corrected = dF_F0_corrected;
-
-clear F Fc tsF dF_F0_corrected spikes0_corrected dF_F0_corrected_
 
 %% Session Data
 
@@ -361,7 +366,7 @@ edges = floor(min(lick_timestamps_adjusted)):0.5:ceil(max(lick_timestamps_adjust
 % figure; histogram(lick_timestamps_adjusted, edges); title('Time distribution of licks'); xlabel('Time (s)');
 
 % Bin distribution of licks
-% figure; histogram(lick_timestamps_spliced(:,2), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
+% figure; histogram(lick_timestamps_spliced(:,3), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
 
 data.lick_count = lick_count;
 data.lick_count_vel_filt = lick_count_vel_filt;
@@ -394,7 +399,6 @@ sessionMidpoint = find(session_data_exclude_zero_trials(:,2) == ceil(nTrials/2)+
 
 data.Args = Args;
 data.nTrials = nTrials;
-data.nNeuron = nNeuron;
 data.data_bin = data_bin;
 data.data_trial = data_trial;
 data.session_data_exclude_zero_trials = session_data_exclude_zero_trials;
@@ -414,27 +418,29 @@ d.data = data;
 obj = class(d,Args.classname,n);
 saveObject(obj,'ArgsC',Args);
 
-% Make cell directories and save spiketimes
-mkdir cells
-cd cells
-
-ori2 = pwd;
-
-for i = 1:nNeuron
-    cell_folderName = strcat('cell', num2str(sprintf('%04d',i)));
-    mkdir(cell_folderName);
-    cd(cell_folderName);
-    spiketrain = spikes_corrected(i,:);
-    save('spiketrain.mat', 'spiketrain', '-v7.3');
+if Args.Spikes
+    % Make cell directories and save spiketimes
+    mkdir cells
+    cd cells
     
-    timestamp_dsp = zeros(size(tsFindex));
-    for ii = 1:size(tsFindex)
-       timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+    ori2 = pwd;
+    
+    for i = 1:nNeuron
+        cell_folderName = strcat('cell', num2str(sprintf('%04d',i)));
+        mkdir(cell_folderName);
+        cd(cell_folderName);
+        spiketrain = spikes_corrected(i,:);
+        save('spiketrain.mat', 'spiketrain', '-v7.3');
+        
+        timestamp_dsp = zeros(size(tsFindex));
+        for ii = 1:size(tsFindex)
+            timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+        end
+        spiketimes = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
+        save('spiketimes.mat', 'spiketimes', '-v7.3');
+        
+        cd(ori2)
     end
-    spiketimes = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
-    save('spiketimes.mat', 'spiketimes', '-v7.3');
-    
-    cd(ori2)
 end
 
 cd(ori)

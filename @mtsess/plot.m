@@ -84,7 +84,7 @@ if(~isempty(Args.NumericArguments))
 
     elseif(Args.LickBinned)
         % Lick Binned
-        histogram(obj.data.lick_timestamps_spliced(:,2), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
+        histogram(obj.data.lick_timestamps_spliced(:,3), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
 
     elseif(Args.LickRate)
         % Lick Rate
