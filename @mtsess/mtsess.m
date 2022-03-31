@@ -15,7 +15,7 @@ function [obj, varargout] = mtsess(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session','RequiredFile','ID*.mat', 'Spikes', 1, 'NumericArguments', [], ...
-				'BinSize',100, 'ThresVel',0);
+				'BinSize',100, 'ThresVel',0, 'WindowSize', 501);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -284,8 +284,7 @@ end
 % plot(session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,8)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(data_trial(1,3));
 
 % Sliding Filter
-windowSize = 501; 
-padSize = floor(windowSize/2);
+padSize = floor(Args.WindowSize/2);
 velocity_padded = padarray(velocity, padSize);
 velocity_averaged = zeros(size(velocity,1), 1);
 acceleration_padded = padarray(acceleration, padSize);
@@ -433,7 +432,7 @@ if Args.Spikes
         save('spiketrain.mat', 'spiketrain', '-v7.3');
         
         timestamp_dsp = zeros(size(tsFindex));
-        for ii = 1:size(tsFindex)
+        for ii = 1:size(tsFindex,1)
             timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
         end
         spiketimes = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx

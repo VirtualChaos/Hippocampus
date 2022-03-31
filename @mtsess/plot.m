@@ -5,12 +5,13 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
-          'TrialVelRaw',0, 'TrialVel',0, 'TrialVelFilt',0, 'VelBinned',0, ...
-          'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, 'LickDistribution',0, ...
-          'LickBinned',0, 'LickRate',0, 'TrialLick',0, 'LickRZ', 0);
-Args.flags = {'LabelsOff','ArgsOnly','TrialVelRaw', 'TrialVel', 'TrialVelFilt', ...
+          'VelRaw',0, 'TrialVelRaw',0, 'Vel',0, 'TrialVel',0, 'TrialVelFilt',0, 'VelBinned',0, ...
+          'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, 'LickDistribution',0, 'TrialLickDistribution',0, ...
+          'LickBinned',0, 'TrialLickBinned',0, 'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ', 0);
+Args.flags = {'LabelsOff','ArgsOnly','VelRaw','TrialVelRaw','Vel', 'TrialVel', 'TrialVelFilt', ...
               'VelBinned', 'VelCount', 'WaterLick','TrialWaterLick', ...
-              'LickDistribution', 'LickBinned', 'LickRate', 'TrialLick', 'LickRZ'};
+              'TrialLickDistribution', 'LickDistribution', 'LickBinned', 'TrialLickBinned', ...
+              'LickRate', 'TrialLickRate', 'TrialLick', 'LickRZ'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -22,7 +23,14 @@ end
 
 if(~isempty(Args.NumericArguments))
 	n = Args.NumericArguments{1};
-	if(Args.TrialVelRaw)
+	if(Args.VelRaw)
+		% Trial Distance-Raw Velocity
+        subplot(2,1,1);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,7)*220); title('Distance'); xlabel('Time (s)'); ylabel('Distance (cm)'); xline(obj.data.data_trial(:,3));
+        subplot(2,1,2);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,8)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(:,3));
+
+    elseif(Args.TrialVelRaw)
 		% Distance-Raw Velocity
         trial = n;
         plot_start_idx = obj.data.TrialTime_idx(trial,1);
@@ -32,8 +40,15 @@ if(~isempty(Args.NumericArguments))
         subplot(2,1,2);
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,8)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(trial,3));
 
-    elseif(Args.TrialVel)
+    elseif(Args.Vel)
         % Distance-Velocity
+        subplot(2,1,1);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,7)*220); title('Distance'); xlabel('Time (s)'); ylabel('Distance (cm)'); xline(obj.data.data_trial(:,3));
+        subplot(2,1,2);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.velocity_averaged(:,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(:,3));
+
+    elseif(Args.TrialVel)
+        % Trial Distance-Velocity
         trial = n;
         plot_start_idx = obj.data.TrialTime_idx(trial,1);
         plot_end_idx = obj.data.TrialTime_idx(trial,2);
@@ -79,16 +94,35 @@ if(~isempty(Args.NumericArguments))
 
     elseif(Args.LickDistribution)
         % Lick Distribution
-        edges = -1000:0.01:1000;
+        edges = -1000:0.1:1000;
         histogram(obj.data.lick_timestamps_adjusted, edges); title('Time distribution of licks'); xlabel('Time (s)');
+
+    elseif(Args.TrialLickDistribution)
+        % Trial Lick Distribution
+        trial = n;
+        edges = -1000:0.01:1000;
+        histogram(obj.data.lick_timestamps_adjusted(obj.data.lick_timestamps_spliced(:,2) == trial), edges); title('Time distribution of licks'); xlabel('Time (s)');
 
     elseif(Args.LickBinned)
         % Lick Binned
         histogram(obj.data.lick_timestamps_spliced(:,3), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
+        xlim([1,100]);
+        
+    elseif(Args.TrialLickBinned)
+        % Trial Lick Binned
+        trial = n;
+        histogram(obj.data.lick_timestamps_spliced(obj.data.lick_timestamps_spliced(:,2) == trial,3), 1:100); title('Bin distribution of licks'); xlabel('Bin No.');
+        xlim([1,100]);
 
     elseif(Args.LickRate)
         % Lick Rate
         plot(1:size(obj.data.lick_binned,1), obj.data.lick_binned(:,3), 'b'); title('Lick Rate along Track Distance'); xlabel('Distance (Bin)'); ylabel('Lick Rate (s^-1)');
+
+    elseif(Args.TrialLickRate)
+        % Trial Lick Rate
+        trial = n;
+        lick_rate = obj.data.lick_count_binned(:,trial) / obj.data.data_bin(obj.data.data_bin(:,2) == trial,6);
+        plot(1:size(obj.data.lick_binned,1), lick_rate, 'b'); title('Lick Rate along Track Distance'); xlabel('Distance (Bin)'); ylabel('Lick Rate (s^-1)');
 
     elseif(Args.TrialLick)   
         % Trial Lick

@@ -218,6 +218,10 @@ if(~isempty(dir(Args.RequiredFile)))
     baseline_mean_height = mean(fit_data_valid_(:,2), 'omitnan');
     peak_height_from_baseline = max(fit_data_valid(:,2), [], 'omitnan') - baseline_mean_height;
     
+    data.std_threshold = std_threshold;
+    data.baseline_mean_height = baseline_mean_height;
+    data.peak_height_from_baseline = peak_height_from_baseline;
+    
     guess = []; % Mean (Centre Bin), Std (Half-Width), Height (Rate)
     fit_data_ = fit_data;
     fit_data_valid_ = fit_data_valid;
@@ -318,6 +322,22 @@ if(~isempty(dir(Args.RequiredFile)))
         fit_data_valid_ = fit_data_(27:126,:);
     end
     
+   
+    binFiringRate = cellData.binFiringRate;
+    binFiringRate_ = binFiringRate;
+        
+    for trial_no = 1:size(binFiringRate, 1)
+        [trial_fits.("t" + trial_no), trial_std_threshold.("t" + trial_no)] = fit_trial(binFiringRate(trial_no,:));
+    end
+    
+    data.trial_fits = trial_fits;
+    data.trial_std_threshold = trial_std_threshold;
+    guess_original = guess;
+
+%     for trial_no = 1:size(binFiringRate, 1)
+%         trial_gmm_fits.("t" + trial_no) = fit_GMM(binFiringRate(trial_no,:));
+%     end
+    
     % Check peak heights compared to baseline
 %     baseline_mean_height = mean(fit_data_valid_(:,2), 'omitnan');
 %     peak_height_from_baseline = max(fit_data_valid(:,2), [], 'omitnan') - baseline_mean_height;
@@ -393,8 +413,6 @@ if(~isempty(dir(Args.RequiredFile)))
 %         plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM');
 %         legend(legends, 'Location', 'northeastoutside');
         
-        binFiringRate = cellData.binFiringRate;
-        binFiringRate_ = binFiringRate;
 %         figure;
 %         imagesc(binFiringRate); title('Firing Rates'); xlabel('Position Bins'); ylabel('Trials');
 %         
@@ -409,35 +427,47 @@ if(~isempty(dir(Args.RequiredFile)))
 %                 y_ = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
 %                 patch(x_, y_, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none');
 %             end
-        
-        trial_gmm_fits = {};
-        for trial_no = 1:size(binFiringRate, 1)
-            trial_gmm_fits.("t" + trial_no) = fit_GMM(binFiringRate(trial_no,:));
-        end
-        
+
         keep_guess = false(size(guess,1),1);
-        fns = fieldnames(trial_gmm_fits);
+        fns = fieldnames(trial_fits);
         for i = 1:size(guess,1)
             trial_peak_check = false(size(binFiringRate,1),1);
             for j = 1:size(binFiringRate,1)
-                if size(trial_gmm_fits.(fns{j}),1) ~= 0
-                    for k = 1:size(trial_gmm_fits.(fns{j}),1)
-                        trial_peak_ind = trial_gmm_fits.(fns{j})(:,1);
-                        trial_peak_ind(trial_gmm_fits.(fns{j})(:,2) == 0) = -1;
-                        trial_peak_multi_check = true(size(trial_peak_ind,1),1);
-                        trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
-                        trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
-                    end
-                    trial_peak_check(j) = any(trial_peak_multi_check,1);
-                else
-                    trial_peak_check(j) = false;
-                end
+                trial_peak_ind = trial_fits.(fns{j})(trial_fits.(fns{j})(:,2) ~= 0,1);
+                trial_peak_multi_check = true(size(trial_peak_ind,1),1);
+                trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
+                trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
+                trial_peak_check(j) = any(trial_peak_multi_check,1);
             end
             if sum(trial_peak_check) > size(trial_peak_check,1)/3
                 keep_guess(i) = true;
             end
         end
         guess = guess(keep_guess,:);
+
+%         keep_guess = false(size(guess,1),1);
+%         fns = fieldnames(trial_gmm_fits);
+%         for i = 1:size(guess,1)
+%             trial_peak_check = false(size(binFiringRate,1),1);
+%             for j = 1:size(binFiringRate,1)
+%                 if size(trial_gmm_fits.(fns{j}),1) ~= 0
+%                     for k = 1:size(trial_gmm_fits.(fns{j}),1)
+%                         trial_peak_ind = trial_gmm_fits.(fns{j})(:,1);
+%                         trial_peak_ind(trial_gmm_fits.(fns{j})(:,2) == 0) = -1;
+%                         trial_peak_multi_check = true(size(trial_peak_ind,1),1);
+%                         trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
+%                         trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
+%                     end
+%                     trial_peak_check(j) = any(trial_peak_multi_check,1);
+%                 else
+%                     trial_peak_check(j) = false;
+%                 end
+%             end
+%             if sum(trial_peak_check) > size(trial_peak_check,1)/3
+%                 keep_guess(i) = true;
+%             end
+%         end
+%         guess = guess(keep_guess,:);
         
 %         keep_guess = false(size(guess,1),1);
 %         for i = 1:size(guess,1)
@@ -486,6 +516,7 @@ if(~isempty(dir(Args.RequiredFile)))
             data.basemapLsm = basemapLsm;
             data.mapLsm_FFT_Low_Pass = mapLsm_FFT_Low_Pass;
             data.GMM = guess;
+            data.GMM_original = guess_original;
             data.baseline = fit_data_;
             data.rmse = rmse;
             data.nrmse_mean = nrmse_mean;
@@ -494,11 +525,14 @@ if(~isempty(dir(Args.RequiredFile)))
         end
     end
     
+%     data.trial_gmm_fits = trial_gmm_fits;
+    
     if isempty(guess)
         data.basemapLrw = basemapLrw;
         data.basemapLsm = basemapLsm;
         data.mapLsm_FFT_Low_Pass = mapLsm_FFT_Low_Pass;
         data.GMM = guess;
+        data.GMM_original = guess_original;
         data.baseline = fit_data_;
         data.rmse = NaN;
         data.nrmse_mean = NaN;
@@ -679,3 +713,33 @@ function trial_gmm_fits = fit_GMM(ratemap)
     %trial_gmm_fits.("t" + trial_no) = guess;
 
 
+function [trial_fits, trial_std_threshold] = fit_trial(ratemap)
+    
+%     for trial_no = 1:size(binFiringRate, 1)
+%     ratemap = binFiringRate(trial_no,:);
+    mapLsm_FFT_Low_Pass_padded = [ratemap(75:100) ratemap ratemap(1:26)];
+    
+    fit_data = [-25:1:126; mapLsm_FFT_Low_Pass_padded]';
+    fit_data_valid = fit_data(27:126,:);
+    
+    fit_data_ = fit_data;
+    fit_data_valid_ = fit_data_valid;
+    peak_threshold = 3; % Multiples of stdev of height
+    min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
+    min_gauss_std = 0;
+    max_gauss_std = 12.5;
+    gauss_overlap_threshold = 0.5;
+  
+    % Check peak heights compared to baseline
+    std_threshold = peak_threshold * std(fit_data_valid_(:,2), 'omitnan');
+    
+    fit_data_ = fit_data;
+    fit_data_valid_ = fit_data_valid;
+    fit_data_valid_(fit_data_valid_(:,2) < std_threshold,2) = 0;
+    %disp(std_threshold);
+        
+    trial_fits = fit_data_valid_;
+    trial_std_threshold = std_threshold;
+%     trial_fits.("t" + trial_no) = fit_data_valid_;
+%     trial_std_threshold.("t" + trial_no) = std_threshold;
+%     end
