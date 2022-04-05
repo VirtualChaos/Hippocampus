@@ -71,8 +71,6 @@ if(~isempty(dir(Args.RequiredFile)))
     
     cells_list = string(importdata(Args.RequiredFile));
     
-    % placecellStats_combined = zeros(length(cells_list), 4, 10);
-    % for cycle = 1:10
     isplacecell = zeros(length(cells_list),5);
     shuffled_sic_values = zeros(length(cells_list), 10000);
     mtplacefield_failed = [];

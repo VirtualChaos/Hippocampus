@@ -321,6 +321,7 @@ if(~isempty(dir(Args.RequiredFile)))
     if isempty(alpha)
         alpha = 0;
     end
+    %alpha = 50;
     data.alpha = alpha;
         
     for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half

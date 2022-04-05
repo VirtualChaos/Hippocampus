@@ -1,7 +1,6 @@
 function [obj, varargout] = plot(obj,varargin)
 %@dirfiles/plot Plot function for dirfiles object.
-%   OBJ = plot(OBJ) creates a raster plot of the neuronal
-%   response.
+%   OBJ = plot(OBJ) creates plots for the neural response
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
