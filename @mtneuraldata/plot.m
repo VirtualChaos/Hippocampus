@@ -54,18 +54,20 @@ if(~isempty(Args.NumericArguments))
         axis off
         colorbar;
     elseif(Args.BinFiringRate)
+        
+        subplot(2,1,1);
         % Adaptive Smoothed Firing Rate Map
         cell_no = n;
         fns = fieldnames(obj.data.placefieldData);
         
         imagesc(obj.data.cellData.(fns{cell_no}).binFiringRate); title('Trial Firing Rates'); xlabel('Position Bins'); ylabel('Trials');
         hold on
-        colorbar;
+        %colorbar;
         hold on
         
         fns = fieldnames(obj.data.placefieldData);
         
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM)
+        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,5)
             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
@@ -77,6 +79,64 @@ if(~isempty(Args.NumericArguments))
                 y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
                 patch(x, y, 'w', 'FaceAlpha', '0.6', 'LineStyle', 'none'); hold on
             end
+        end
+        hold off
+        
+        % Gaussian Mixed Model
+        cell_no = n;
+        fns = fieldnames(obj.data.placefieldData);
+        
+        subplot(2,1,2);
+        title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
+        plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw'); hold on
+        
+        plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth'); hold on
+        
+        plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
+        
+        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,5)
+            mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
+            mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
+            xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
+            ax = gca;
+            for peak_no = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)
+                left = obj.data.placefieldData.(fns{cell_no}).GMM(peak_no,1) - obj.data.placefieldData.(fns{cell_no}).GMM(peak_no,2);
+                right = obj.data.placefieldData.(fns{cell_no}).GMM(peak_no,1) + obj.data.placefieldData.(fns{cell_no}).GMM(peak_no,2);
+                x = [left right right left];
+                y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
+                patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none'); hold on
+            end
+            
+            gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
+            
+            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)
+                x = linspace(-25,126,152);
+                mu = obj.data.placefieldData.(fns{cell_no}).GMM(i,1);
+                sig = obj.data.placefieldData.(fns{cell_no}).GMM(i,2);
+                amp = obj.data.placefieldData.(fns{cell_no}).GMM(i,3);
+                vo = 0;
+                y = gaus(x,mu,sig,amp,vo);
+                if mu < 50
+                    y(101:126) = y(1:26);
+                else
+                    y(27:52) = y(127:152);
+                end
+                % Plot gaussian
+                % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+            end
+            axis([1 100 -inf inf]);
+            yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
+            yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
+            
+            x = linspace(-25,126,152);         
+            y = 0;
+            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)
+                y = gaus(x,obj.data.placefieldData.(fns{cell_no}).GMM(i,1),obj.data.placefieldData.(fns{cell_no}).GMM(i,2),obj.data.placefieldData.(fns{cell_no}).GMM(i,3),vo) + y;
+            end
+            
+            legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
+            plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+            %legend(legends, 'Location', 'northeastoutside');
         end
         hold off
         
@@ -102,11 +162,12 @@ if(~isempty(Args.NumericArguments))
         hold off
         
     elseif(Args.GMM)
+        
         % Gaussian Mixed Model
         cell_no = n;
         fns = fieldnames(obj.data.placefieldData);
         
-        subplot(2,1,1);
+        %subplot(2,1,1);
         title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw'); hold on
         
@@ -114,7 +175,7 @@ if(~isempty(Args.NumericArguments))
         
         plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
         
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM)
+        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,5)
             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
@@ -160,60 +221,60 @@ if(~isempty(Args.NumericArguments))
         end
         hold off
         
-        subplot(2,1,2);
-        title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
-        plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw'); hold on
-        
-        plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth'); hold on
-        
-        plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
-        
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM_original)
-            mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM_original(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)]'];
-            mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
-            xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
-            ax = gca;
-            for peak_no = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
-                left = obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,1) - obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,2) *1.5;
-                right = obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,1) + obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,2) *1.5;
-                x = [left right right left];
-                y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
-                patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none'); hold on
-            end
-            
-            gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
-            
-            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
-                x = linspace(-25,126,152);
-                mu = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,1);
-                sig = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,2);
-                amp = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,3);
-                vo = 0;
-                y = gaus(x,mu,sig,amp,vo);
-                if mu < 50
-                    y(101:126) = y(1:26);
-                else
-                    y(27:52) = y(127:152);
-                end
-                % Plot gaussian
-                % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
-            end
-            axis([1 100 -inf inf]);
-            yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
-            yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
-            
-            x = linspace(-25,126,152);
-           
-            y = 0;
-            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
-                y = gaus(x,obj.data.placefieldData.(fns{cell_no}).GMM_original(i,1),obj.data.placefieldData.(fns{cell_no}).GMM_original(i,2),obj.data.placefieldData.(fns{cell_no}).GMM_original(i,3),vo) + y;
-            end
-            
-            legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-            plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
-            legend(legends, 'Location', 'northeastoutside');
-        end
-        hold off
+%         subplot(2,1,2);
+%         title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
+%         plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw'); hold on
+%         
+%         plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth'); hold on
+%         
+%         plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
+%         
+%         if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM_original)
+%             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM_original(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)]'];
+%             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
+%             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
+%             ax = gca;
+%             for peak_no = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
+%                 left = obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,1) - obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,2) *1.5;
+%                 right = obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,1) + obj.data.placefieldData.(fns{cell_no}).GMM_original(peak_no,2) *1.5;
+%                 x = [left right right left];
+%                 y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
+%                 patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none'); hold on
+%             end
+%             
+%             gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
+%             
+%             for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
+%                 x = linspace(-25,126,152);
+%                 mu = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,1);
+%                 sig = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,2);
+%                 amp = obj.data.placefieldData.(fns{cell_no}).GMM_original(i,3);
+%                 vo = 0;
+%                 y = gaus(x,mu,sig,amp,vo);
+%                 if mu < 50
+%                     y(101:126) = y(1:26);
+%                 else
+%                     y(27:52) = y(127:152);
+%                 end
+%                 % Plot gaussian
+%                 % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+%             end
+%             axis([1 100 -inf inf]);
+%             yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
+%             yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
+%             
+%             x = linspace(-25,126,152);
+%            
+%             y = 0;
+%             for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM_original,1)
+%                 y = gaus(x,obj.data.placefieldData.(fns{cell_no}).GMM_original(i,1),obj.data.placefieldData.(fns{cell_no}).GMM_original(i,2),obj.data.placefieldData.(fns{cell_no}).GMM_original(i,3),vo) + y;
+%             end
+%             
+%             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
+%             plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+%             legend(legends, 'Location', 'northeastoutside');
+%         end
+%         hold off
         
     elseif(Args.TrialGMM)
         delete(findall(gcf,'type','annotation'));
@@ -305,7 +366,7 @@ if(~isempty(Args.NumericArguments))
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw');
         subplot(4,1,4);
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth');
-        annotation('textbox', [0.005 0.85 0.095 0.07], 'String', sprintf("Alpha: %d\n", obj.data.cellData.(fns{cell_no}).alpha));
+        annotation('textbox', [0.005 0.85 0.095 0.07], 'String', sprintf("Alpha: %d\n", obj.data.cellData.(fns{cell_no}).alpha));    
         
 % 	else
 % 		% code to plot yet another kind of plot

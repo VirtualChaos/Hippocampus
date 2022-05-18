@@ -41,21 +41,26 @@ if(~isempty(Args.NumericArguments))
 
     elseif(Args.Vel)
         % Distance-Velocity
-        subplot(2,1,1);
+        subplot(3,1,1);
         plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,7)*220); title('Distance'); xlabel('Time (s)'); ylabel('Distance (cm)'); xline(obj.data.data_trial(:,3));
-        subplot(2,1,2);
+        subplot(3,1,2);
         plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.velocity_averaged(:,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(:,3));
+        subplot(3,1,3);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.velocity_averaged_filt(:,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (Thresholded) (cm/s)'); xline(obj.data.data_trial(:,3));
 
     elseif(Args.TrialVel)
         % Trial Distance-Velocity
         trial = n;
         plot_start_idx = obj.data.TrialTime_idx(trial,1);
         plot_end_idx = obj.data.TrialTime_idx(trial,2);
-        subplot(2,1,1);
+        subplot(3,1,1);
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*220); title('Distance'); xlabel('Time (s)'); ylabel('Distance (cm)'); xline(obj.data.data_trial(trial,3));
-        subplot(2,1,2);
+        subplot(3,1,2);
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged(plot_start_idx:plot_end_idx,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(trial,3));
+        subplot(3,1,3);
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged_filt(plot_start_idx:plot_end_idx,4)); title('Velocity (Thresholded)'); xlabel('Time (s)'); ylabel('Velocity (cm/s)'); xline(obj.data.data_trial(trial,3));
 
+        
     elseif(Args.TrialVelFilt)
         % Distance-Filtered Velocity
         trial = n;
@@ -136,12 +141,12 @@ if(~isempty(Args.NumericArguments))
     elseif(Args.LickRZ)   
         % Lick Reward Zone
         lick_reward_zone_prc = zeros(100,1);
-        rz_timing = 5; % Change reward zone timing
+        rz_timing = 5000; % Change reward zone timing
         for i = 1:100
             lick_reward_zone_prc(i) = nnz(obj.data.lick_timestamps_spliced(find(obj.data.lick_timestamps_spliced(:,3) == i & abs(obj.data.lick_timestamps_adjusted(:,1)) <= rz_timing), [1])) / nnz(obj.data.lick_timestamps_adjusted(:,1));
         end
 
-        plot(lick_reward_zone_prc); title('Licks (Reward Zone) < 5 sec'); xlabel('Bins'); ylabel('No. of Licks (%)');
+        plot(lick_reward_zone_prc); title('Lick % (Reward Zone) < 5 sec'); xlabel('Bins'); ylabel('No. of Licks (%)');
 
         
 % 	else
