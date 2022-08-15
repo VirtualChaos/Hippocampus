@@ -5,9 +5,11 @@ function [obj, varargout] = plot(obj,varargin)
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
           'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, 'BinFiringRate',0, ...
-          'TrialBinFiringRate', 0, 'Baseline',0, 'GMM',0, 'TrialGMM',0, 'TrialFits',0, 'AlphaAdSm',0);
+          'TrialBinFiringRate', 0, 'Baseline',0, 'GMM',0, 'TrialFits',0, 'AlphaAdSm',0, ...
+          'FluorescenceTrace',0, 'TrialFluorescenceTrace',0);
 Args.flags = {'LabelsOff','ArgsOnly','FiringRateMapRaw','FiringRateMapAdSm','BinFiringRate', ...
-              'TrialBinFiringRate','Baseline','GMM', 'TrialGMM', 'TrialFits', 'AlphaAdSm'};
+              'TrialBinFiringRate','Baseline','GMM', 'TrialFits', 'AlphaAdSm', ...
+              'FluorescenceTrace','TrialFluorescenceTrace'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -67,7 +69,7 @@ if(~isempty(Args.NumericArguments))
         
         fns = fieldnames(obj.data.placefieldData);
         
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,5)
+        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,4)
             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
@@ -92,9 +94,16 @@ if(~isempty(Args.NumericArguments))
         
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth'); hold on
         
+        plot(imgaussfilt(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 3), 'c'); legends{2} = sprintf('AdSmooth'); hold on
+                
         plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
         
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,5)
+        axis([1 100 -inf inf]);
+        yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
+        yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
+        yline(obj.data.placefieldData.(fns{cell_no}).std_threshold / obj.data.placefieldData.(fns{cell_no}).Args.PeakThreshold,'b--'); hold on
+        
+        if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,4)
             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319'); hold on
@@ -110,32 +119,29 @@ if(~isempty(Args.NumericArguments))
             gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
             
             for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)
-                x = linspace(-25,126,152);
+                x = linspace(-24,125,150);
                 mu = obj.data.placefieldData.(fns{cell_no}).GMM(i,1);
                 sig = obj.data.placefieldData.(fns{cell_no}).GMM(i,2);
                 amp = obj.data.placefieldData.(fns{cell_no}).GMM(i,3);
                 vo = 0;
                 y = gaus(x,mu,sig,amp,vo);
                 if mu < 50
-                    y(101:126) = y(1:26);
+                    y(101:125) = y(1:25);
                 else
-                    y(27:52) = y(127:152);
+                    y(26:50) = y(126:150);
                 end
                 % Plot gaussian
-                % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+                % plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
             end
-            axis([1 100 -inf inf]);
-            yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
-            yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
             
-            x = linspace(-25,126,152);         
+            x = linspace(-24,125,150);         
             y = 0;
             for i = 1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)
                 y = gaus(x,obj.data.placefieldData.(fns{cell_no}).GMM(i,1),obj.data.placefieldData.(fns{cell_no}).GMM(i,2),obj.data.placefieldData.(fns{cell_no}).GMM(i,3),vo) + y;
             end
             
             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-            plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+            plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
             %legend(legends, 'Location', 'northeastoutside');
         end
         hold off
@@ -157,7 +163,7 @@ if(~isempty(Args.NumericArguments))
         
         plot(1:100, obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'b'); legends{1} = sprintf('Firing Rate Map');
         hold on
-        plot(obj.data.placefieldData.(fns{cell_no}).baseline(27:126, 1), obj.data.placefieldData.(fns{cell_no}).baseline(27:126, 2),'r'); legends{2} = sprintf('Estimated Baseline');
+        plot(obj.data.placefieldData.(fns{cell_no}).baseline(26:125, 1), obj.data.placefieldData.(fns{cell_no}).baseline(26:125, 2),'r'); legends{2} = sprintf('Estimated Baseline');
         legend(legends);
         hold off
         
@@ -198,12 +204,12 @@ if(~isempty(Args.NumericArguments))
                 vo = 0;
                 y = gaus(x,mu,sig,amp,vo);
                 if mu < 50
-                    y(101:126) = y(1:26);
+                    y(101:125) = y(1:25);
                 else
-                    y(27:52) = y(127:152);
+                    y(26:50) = y(126:150);
                 end
                 % Plot gaussian
-                % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+                % plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
             end
             axis([1 100 -inf inf]);
             yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
@@ -216,7 +222,7 @@ if(~isempty(Args.NumericArguments))
             end
             
             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-            plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+            plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
             legend(legends, 'Location', 'northeastoutside');
         end
         hold off
@@ -252,12 +258,12 @@ if(~isempty(Args.NumericArguments))
 %                 vo = 0;
 %                 y = gaus(x,mu,sig,amp,vo);
 %                 if mu < 50
-%                     y(101:126) = y(1:26);
+%                   y(101:125) = y(1:25);
 %                 else
-%                     y(27:52) = y(127:152);
+%                   y(26:50) = y(126:150);
 %                 end
 %                 % Plot gaussian
-%                 % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+%                 % plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
 %             end
 %             axis([1 100 -inf inf]);
 %             yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
@@ -271,66 +277,10 @@ if(~isempty(Args.NumericArguments))
 %             end
 %             
 %             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-%             plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+%             plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
 %             legend(legends, 'Location', 'northeastoutside');
 %         end
 %         hold off
-        
-    elseif(Args.TrialGMM)
-        delete(findall(gcf,'type','annotation'));
-        cell_no = floor((n-1)/obj.data.nTrials) + 1;
-        trial = n - ((cell_no-1)*obj.data.nTrials);
-        fns = fieldnames(obj.data.placefieldData);
-        % fprintf("Cell: %d; Trial: %d\n",cell_no,trial);
-        
-        plot(obj.data.cellData.(fns{cell_no}).binFiringRate(trial,:), 'b'); title('Trial Firing Rates'); xlabel('Position Bins'); ylabel('Firing Rate (spikes/sec)');
-        annotation('textbox', [0.005 0.85 0.095 0.07], 'String', sprintf("Cell: %d\nTrial: %d\n",cell_no,trial));
-        
-        if ~isempty(obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial)))
-            mu_lines = [obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial)),1)]'];
-            mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
-            xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319');
-            ax = gca;
-            for peak_no = 1:size(obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial)),1)
-                left = obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(peak_no,1) - obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(peak_no,2);
-                right = obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(peak_no,1) + obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(peak_no,2);
-                x = [left right right left];
-                y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
-                patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none');
-            end
-            
-            gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
-            
-            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial)),1)
-                x = linspace(-25,126,152);
-                mu = obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,1);
-                sig = obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,2);
-                amp = obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,3);
-                vo = 0;
-                y = gaus(x,mu,sig,amp,vo);
-                if mu < 50
-                    y(101:126) = y(1:26);
-                else
-                    y(27:52) = y(127:152);
-                end
-                % Plot gaussian
-                % plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
-            end
-            axis([1 100 -inf inf]);
-%             yline((baseline_mean_height + peak_height_from_baseline/2),'r');
-%             yline(std_threshold,'b');
-            
-            x = linspace(-25,126,152);           
-            y = 0;
-            for i = 1:size(obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial)),1)
-                y = gaus(x,obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,1),obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,2),obj.data.placefieldData.(fns{cell_no}).trial_gmm_fits.("t" + num2str(trial))(i,3),vo) + y;
-            end
-            
-%             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-%             plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM');
-%             legend(legends, 'Location', 'northeastoutside');
-        end
-        hold off
         
     elseif(Args.TrialFits)
         delete(findall(gcf,'type','annotation'));
@@ -368,6 +318,61 @@ if(~isempty(Args.NumericArguments))
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth');
         annotation('textbox', [0.005 0.85 0.095 0.07], 'String', sprintf("Alpha: %d\n", obj.data.cellData.(fns{cell_no}).alpha));    
         
+    elseif(Args.FluorescenceTrace)
+        
+        place_cell_sort = sortrows(obj.data.placefieldStats,[1 4]);
+        [c, ia, ic] = unique(place_cell_sort(:,1),'last');
+        place_cell_sort = sortrows(place_cell_sort(ia,:),[2 1]);
+        
+        subplot(1,2,1)
+        maps_all_combined = [];
+        fns = fieldnames(obj.data.cellData);
+        for cell_no = 1:length(fns)
+            maps_all_combined = [maps_all_combined; obj.data.cellData.(fns{cell_no}).maps_adsm];
+        end
+        maps_placecells_combined = maps_all_combined(place_cell_sort(:,1),:);
+        imagesc(maps_placecells_combined); title('AdSm'); xlabel('Bins'); ylabel('Neuron (sorted)');
+        
+        subplot(1,2,2)
+        fluorescence_placecells_combined = obj.data.sessData.dF_F0_corrected(place_cell_sort(:,1),:);
+        imagesc(fluorescence_placecells_combined); title('dF\_F0'); xlabel('Time (unit)'); ylabel('Neuron (sorted)');
+
+    elseif(Args.TrialFluorescenceTrace)
+        
+        trial_no = n;
+        trial_start_time = obj.data.sessData.data_trial(trial_no,2);
+        trial_end_time = obj.data.sessData.data_trial(trial_no,3);
+        [val,trial_start_idx] = min(abs(obj.data.sessData.tsF-trial_start_time));
+        [val,trial_end_idx] = min(abs(obj.data.sessData.tsF-trial_end_time));
+        
+        place_cell_sort = sortrows(obj.data.placefieldStats,[1 4]);
+        [c, ia, ic] = unique(place_cell_sort(:,1),'last');
+        place_cell_sort = sortrows(place_cell_sort(ia,:),[2 1]);
+        
+        non_place_cell = setdiff(obj.data.placecellStats(:,1),place_cell_sort(:,1));
+        
+        maps_all_combined = [];
+        fns = fieldnames(obj.data.cellData);
+        for cell_no = 1:length(fns)
+            maps_all_combined = [maps_all_combined; obj.data.cellData.(fns{cell_no}).maps_adsm];
+        end
+        maps_placecells_combined = maps_all_combined(place_cell_sort(:,1),:);
+        maps_nonplacecells_combined = maps_all_combined(non_place_cell,:);
+        
+        subplot(1,4,1)
+        imagesc(maps_placecells_combined); title('AdSm'); xlabel('Bins'); ylabel('Neuron (sorted)');
+        
+        subplot(1,4,2)
+        imagesc(maps_nonplacecells_combined); title('AdSm'); xlabel('Bins'); ylabel('Neuron (sorted)');
+        
+        subplot(1,4,3)
+        imagesc([maps_placecells_combined; maps_nonplacecells_combined]); title('AdSm'); xlabel('Bins'); ylabel('Neuron (sorted)');
+        
+        subplot(1,4,4)
+        fluorescence_placecells_combined = obj.data.sessData.dF_F0_corrected(place_cell_sort(:,1),trial_start_idx:trial_end_idx);
+        imagesc(fluorescence_placecells_combined); title('dF\_F0'); xlabel('Time (unit)'); ylabel('Neuron (sorted)');
+
+        
 % 	else
 % 		% code to plot yet another kind of plot
 % 		
@@ -379,6 +384,7 @@ if(~isempty(Args.NumericArguments))
 
 	% add an appropriate title
 % 	sdstr = get(obj,'SessionDirs');
+
 % 	title(getDataOrder('ShortName','DirString',sdstr{1}))
 else
 	% plot all data

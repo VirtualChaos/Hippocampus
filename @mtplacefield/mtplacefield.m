@@ -15,13 +15,13 @@ function [obj, varargout] = mtplacefield(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
     'ObjectLevel','Cell','RequiredFile','mtcell.mat', ...
-    'BinSize',100, 'ThresVel',1);
+    'BinSize',100, 'ThresVel',1, 'FiltFrac',0.6, 'PeakThreshold',3, 'TrialPeakThreshold',1, 'TrialPeakCheckFrac',2/3);
 
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'BinSize', 'ThresVel'};
+Args.DataCheckArgs = {'BinSize', 'ThresVel', 'FiltFrac', 'PeakThreshold', 'TrialPeakThreshold', 'TrialPeakCheckFrac'};
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
     'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -104,19 +104,19 @@ if(~isempty(dir(Args.RequiredFile)))
         Y_filt(find(f > filt_freq_arr(filt_freq_idx),1):end-find(f > filt_freq_arr(filt_freq_idx),1)) = 0; % Low-Pass filter at 150Hz
         mapLsm_FFT_Low_Pass = abs(ifft(Y_filt));
         
-        % subplot(4,3,filt_freq_idx);
-        % plot(basemapLrw, 'g');legends{1} = sprintf('Raw');
-        % hold on
-        % plot(basemapLsm, 'b');legends{2} = sprintf('AdSmooth');
-        % hold on
-        % plot(mapLsm_FFT_Low_Pass, 'r');legends{3} = sprintf('AdSm-FFT-Low-Pass');
-        % %legend(legends);
-        % title("filt_freq =" + filt_freq_arr(filt_freq_idx) + "Hz")
+%         subplot(4,3,filt_freq_idx);
+%         plot(basemapLrw, 'g');legends{1} = sprintf('Raw');
+%         hold on
+%         plot(basemapLsm, 'b');legends{2} = sprintf('AdSmooth');
+%         hold on
+%         plot(mapLsm_FFT_Low_Pass, 'r');legends{3} = sprintf('AdSm-FFT-Low-Pass');
+%         %legend(legends);
+%         title("filt_freq =" + filt_freq_arr(filt_freq_idx) + "Hz")
     end
     
-    filt_freq = f(find((cumsum(P1) ./ sum(P1) > 0.75), 1, 'first')); % 75% threshold
+    filt_freq = f(find((cumsum(P1) ./ sum(P1) > Args.FiltFrac), 1, 'first')); % 75% threshold
     Y_filt = Y;
-    Y_filt(find(f > filt_freq,1):end-find(f > filt_freq,1)) = 0; % Low-Pass filter at 150Hz
+    Y_filt(find(f > filt_freq,1):end-find(f > filt_freq,1)) = 0; % Low-Pass filter at 15Hz
     mapLsm_FFT_Low_Pass = abs(ifft(Y_filt));
     
 %         figure;
@@ -132,33 +132,26 @@ if(~isempty(dir(Args.RequiredFile)))
     % GMM Iterative Method
     
     % Interpolate
-    mapLsm_FFT_Low_Pass_padded = [mapLsm_FFT_Low_Pass(75:100) mapLsm_FFT_Low_Pass mapLsm_FFT_Low_Pass(1:26)];
-    % mapLsm_FFT_Low_Pass_padded = [binFiringRate(11,75:100) binFiringRate(11,:) binFiringRate(11,1:26)];
-    % mapLsm_FFT_Low_Pass_padded = [basemapLsm(75:100) basemapLsm basemapLsm(1:26)];
-    % vq = interp1(1:152,mapLsm_FFT_Low_Pass_padded,0.1:0.1:152,'linear');
-    % vq = vq(11:1510);
-    %
-    % fit_data = [-24.9:0.1:125; vq]';
-    % fit_data_valid = fit_data(251:1250,:);
+    mapLsm_FFT_Low_Pass_padded = [mapLsm_FFT_Low_Pass(76:100) mapLsm_FFT_Low_Pass mapLsm_FFT_Low_Pass(1:25)];
     
-    fit_data = [-25:1:126; mapLsm_FFT_Low_Pass_padded]';
-    fit_data_valid = fit_data(27:126,:);
+    fit_data = [-24:1:125; mapLsm_FFT_Low_Pass_padded]';
+    fit_data_valid = fit_data(26:125,:);
     
     guess = []; % Mean (Centre Bin), Std (Half-Width), Height (Rate)
     fit_data_ = fit_data;
     fit_data_valid_ = fit_data_valid;
-    peak_threshold = 6; % Multiples of stdev of height
-    min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
-    min_gauss_std = 0;
-    max_gauss_std = 12.5;
-    gauss_overlap_threshold = 0.5;
+    %min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
+    min_peak_height = mean(fit_data_valid_(:,2), 'omitnan');
+    max_gauss_width = 12.5;
+    gauss_overlap_threshold = 1;
     
-    while size(guess,1) < 50
+    % Finding baseline
+    while size(guess,1) < 3
         % Find max peak
         [max_height, max_bin_idx] = max(fit_data_valid_(:,2), [], 'omitnan');
         max_bin = fit_data_valid_(max_bin_idx);
 %         % Stop searching for peaks once height drops below height threshold
-%         if max_height <= peak_threshold * std(fit_data_valid_(:,2), 'omitnan')
+%         if max_height <= Args.PeakThreshold * std(fit_data_valid_(:,2), 'omitnan')
 %             break
 %         end
         
@@ -166,55 +159,63 @@ if(~isempty(dir(Args.RequiredFile)))
         guess_bin = max_bin; % Mean
         guess_height = max_height; % Height
         
-        % Halt fitting process if peak drops below minimum height
-        if guess_height < min_peak_height
-            break
-        end
-        
         % Find half height index on each side of the center bin (gaussian mean)
-        half_height = 0.5 * max_height;
-        max_bin_idx_ = find(fit_data_(:,1) == max_bin);
+        half_height = 0.5 * guess_height;
+        max_bin_idx_ = find(fit_data_(:,1) == guess_bin);
         left_idx = find(fit_data_(1:max_bin_idx_,2) <= half_height, 1, 'last');
         left_side = fit_data_(left_idx,1);
         right_idx = find(fit_data_(max_bin_idx_:end,2) <= half_height, 1, 'first') + max_bin_idx_ - 1;
         right_side = fit_data_(right_idx,1);
         
         % Use shorter side
-        if isempty(left_side)
+        if isempty(left_side) && ~isempty(right_side)
             shorter_width = abs(right_side - max_bin);
-        elseif isempty(right_side)
+        elseif isempty(right_side) && ~isempty(left_side)
             shorter_width = abs(left_side - max_bin);
         elseif isempty(left_side) && isempty(right_side)
-            shorter_width = 10000;
+            break
         else
             shorter_width = min(abs(left_side - max_bin), abs(right_side - max_bin));
         end
         fwhm = shorter_width * 2;
         guess_std = fwhm / (2 * sqrt(2 * log(2)));
         
-        % Check that gaussian std are within limits
-        %         if guess_std < min_gauss_std
-        %             guess_std = min_gauss_std;
-        %         end
-        %         if guess_std > max_gauss_std
-        %             guess_std = max_gauss_std;
-        %         end
+        % Halt fitting process if peak drops below minimum height
+        if guess_height < min_peak_height
+            break
+        end
         
-%         % Halt fitting process if peak drops below minimum height
-%         if guess_std == 0
-%             break
-%         end
+        if guess_std > max_gauss_width
+            break
+        end
+        
         guess = [guess; [guess_bin, guess_std, guess_height]];
         
         ys = zeros(size(fit_data,1),1);
         ys = ys + guess_height * exp(-(fit_data(:,1)-guess_bin).^2 / (2*(guess_std.^2)));
+        
+        left = floor(guess_bin - guess_std);
+        right = ceil(guess_bin + guess_std);
+        ys(1:left+25-1) = 0;
+        ys(right+25+1:end) = 0;
+        ys(left+25:right+25) = ys(left+25:right+25) - (guess_height - min([ys(left+25) ys(right+25)]));
+        
+        if guess_bin < 50
+            ys(101:125) = ys(1:25);
+        else
+            ys(26:50) = ys(126:150);
+        end
+        
         fit_data_(:,2) = fit_data_(:,2) - ys;
-        %fit_data_valid_ = fit_data_(251:1250,:);
-        fit_data_valid_ = fit_data_(27:126,:);
+        fit_data_valid_ = fit_data_(26:125,:);
+        
+%         if mean(fit_data_valid_(:,2), 'omitnan') < mean(fit_data_valid(:,2), 'omitnan')
+%             break
+%         end
     end
     
     % Check peak heights compared to baseline
-    std_threshold = peak_threshold * std(fit_data_valid_(:,2), 'omitnan');
+    std_threshold = Args.PeakThreshold * std(fit_data_valid_(:,2), 'omitnan');
     baseline_mean_height = mean(fit_data_valid_(:,2), 'omitnan');
     peak_height_from_baseline = max(fit_data_valid(:,2), [], 'omitnan') - baseline_mean_height;
     
@@ -222,30 +223,28 @@ if(~isempty(dir(Args.RequiredFile)))
     data.baseline_mean_height = baseline_mean_height;
     data.peak_height_from_baseline = peak_height_from_baseline;
     
+%     figure;
+%     plot(fit_data_valid(:,1), fit_data_valid(:,2), 'b'); legends{1} = sprintf('Firing Rate Map');
+%     hold on
+%     plot(fit_data_(26:125, 1), fit_data_(26:125, 2),'r'); legends{2} = sprintf('Estimated Baseline');
+%     legend(legends);
+%     hold off
+    
     guess = []; % Mean (Centre Bin), Std (Half-Width), Height (Rate)
     fit_data_ = fit_data;
     fit_data_valid_ = fit_data_valid;
     
     % . Find peak: Loop through, finding a candidate peak, and fitting with a guess gaussian
     %   Stopping procedures: limit on # of peaks, or relative or absolute height thresholds
-    while size(guess,1) < 50
+    while size(guess,1) < 10
         % Find max peak
         [max_height, max_bin_idx] = max(fit_data_valid_(:,2), [], 'omitnan');
         max_bin = fit_data_valid_(max_bin_idx);
-        % Stop searching for peaks once height drops below height threshold
-        if max_height <= std_threshold %peak_threshold * std(fit_data_valid_(:,2), 'omitnan')
-            break
-        end
         
         % Set the guess parameters for gaussian fitting
         guess_bin = max_bin; % Mean
         guess_height = max_height; % Height
-        
-        % Halt fitting process if peak drops below minimum height
-        if guess_height < (baseline_mean_height + peak_height_from_baseline/2) %min_peak_height
-            break
-        end
-        
+                
         % Find half height index on each side of the center bin (gaussian mean)
         half_height = 0.5 * max_height;
         max_bin_idx_ = find(fit_data_(:,1) == max_bin);
@@ -255,47 +254,64 @@ if(~isempty(dir(Args.RequiredFile)))
         right_side = fit_data_(right_idx,1);
         
         % Use shorter side
-        if isempty(left_side)
+        if isempty(left_side) && ~isempty(right_side)
             shorter_width = abs(right_side - max_bin);
-        elseif isempty(right_side)
+        elseif isempty(right_side) && ~isempty(left_side)
             shorter_width = abs(left_side - max_bin);
         elseif isempty(left_side) && isempty(right_side)
-            shorter_width = 10000;
+            break
         else
             shorter_width = min(abs(left_side - max_bin), abs(right_side - max_bin));
         end
         fwhm = shorter_width * 2;
         guess_std = fwhm / (2 * sqrt(2 * log(2)));
         
-        % Check that gaussian std are within limits
-        %         if guess_std < min_gauss_std
-        %             guess_std = min_gauss_std;
-        %         end
-        %         if guess_std > max_gauss_std
-        %             guess_std = max_gauss_std;
-        %         end
-        
-        guess = [guess; [guess_bin, guess_std, guess_height]];
+        if guess_std > max_gauss_width
+            break
+        end
         
         ys = zeros(size(fit_data,1),1);
         ys = ys + guess_height * exp(-(fit_data(:,1)-guess_bin).^2 / (2*(guess_std.^2)));
+        
+        left = floor(guess_bin - guess_std);
+        right = ceil(guess_bin + guess_std);
+        ys(1:left+25-1) = 0;
+        ys(right+25+1:end) = 0;
+        ys(left+25:right+25) = ys(left+25:right+25) - (guess_height - min([ys(left+25) ys(right+25)]));
+        
+        if guess_bin < 50
+            ys(101:125) = ys(1:25);
+        else
+            ys(26:50) = ys(126:150);
+        end
+        
         fit_data_(:,2) = fit_data_(:,2) - ys;
-        %fit_data_valid_ = fit_data_(251:1250,:);
-        fit_data_valid_ = fit_data_(27:126,:);
+        fit_data_valid_ = fit_data_(26:125,:);
+
+        % Stop searching for peaks
+        if max([fit_data(left+25,2) fit_data(right+25,2)]) <= std_threshold | guess_height < min_peak_height %Args.PeakThreshold * std(fit_data_valid_(:,2), 'omitnan')
+%             max([fit_data(left+25,2) fit_data(right+25,2)])
+%             std_threshold
+            break
+        end
+        
+        guess = [guess; [guess_bin, guess_std, guess_height]];
+        
     end
     
     % Check overlaps of gaussians
-    if size(guess,1) > 1
-            guess = sortrows(guess);
+    for i = 1:2
+        if size(guess,1) > 1
+            guess = sortrows(guess,1,'ascend');
             gauss_bounds = zeros(size(guess,1),2);
             for peak_no = 1:size(guess,1)
                 gauss_bounds(peak_no,1) = (guess(peak_no,1) - (guess(peak_no,2) * gauss_overlap_threshold)); % Left bound
                 gauss_bounds(peak_no,2) = (guess(peak_no,1) + (guess(peak_no,2) * gauss_overlap_threshold)); % Right bound
             end
-        
+            
             gauss_bounds = [gauss_bounds; gauss_bounds(1,:) + 100]; % Wrap around bin 100 to bin 1 for comparison
             guess_ = [guess; guess(1,:)];
-        
+            
             keep_peak_ = true(size(guess_,1), 1);
             for peak_no = 1:size(guess,1)
                 if gauss_bounds(peak_no,2) > gauss_bounds(peak_no+1,1) % Check right bound of current peak with left bound of next peak
@@ -306,111 +322,141 @@ if(~isempty(dir(Args.RequiredFile)))
                     end
                 end
             end
-        
+            
             keep_peak = keep_peak_(2:end-1);
             keep_peak = [keep_peak_(1) & keep_peak_(end); keep_peak];
             guess = guess(keep_peak, :);
-    end % Commented out
-    
-    fit_data_ = fit_data;
-    fit_data_valid_ = fit_data_valid;
-    for i = 1:size(guess,1)
-        ys = zeros(size(fit_data,1),1);
-        ys = ys + guess(i,3) * exp(-(fit_data(:,1)-guess(i,1)).^2 / (2*(guess(i,2).^2)));
-        fit_data_(:,2) = fit_data_(:,2) - ys;
-        %fit_data_valid_ = fit_data_(251:1250,:);
-        fit_data_valid_ = fit_data_(27:126,:);
+        end
     end
     
-   
+    % Check gaussian width
+%     if size(guess,1) > 1
+%         keep_peak = true(size(guess,1), 1);
+%         keep_peak = guess(:,2) < max_gauss_width;
+%         guess = guess(keep_peak, :);
+%     end
+    
+%     fit_data_ = fit_data;
+%     fit_data_valid_ = fit_data_valid;
+%     for i = 1:size(guess,1)
+%         ys = zeros(size(fit_data,1),1);
+%         ys = ys + guess(i,3) * exp(-(fit_data(:,1)-guess(i,1)).^2 / (2*(guess(i,2).^2)));
+%         
+%         left = floor(guess_bin - guess_std);
+%         right = ceil(guess_bin + guess_std);
+%         ys(1:left+25-1) = 0;
+%         ys(right+25+1:end) = 0;
+%         ys(left+25:right+25) = ys(left+25:right+25) - (guess_height - min([ys(left+25) ys(right+25)]));
+%         
+%         if guess_bin < 50
+%             ys(101:125) = ys(1:25);
+%         else
+%             ys(26:50) = ys(126:150);
+%         end
+%         
+%         fit_data_(:,2) = fit_data_(:,2) - ys;
+%         fit_data_valid_ = fit_data_(26:125,:);
+%     end
+    
     binFiringRate = cellData.binFiringRate;
     binFiringRate_ = binFiringRate;
         
     for trial_no = 1:size(binFiringRate, 1)
-        [trial_fits.("t" + trial_no), trial_std_threshold.("t" + trial_no)] = fit_trial(binFiringRate(trial_no,:));
+        [trial_fits.("t" + trial_no), trial_std_threshold.("t" + trial_no)] = fit_trial(binFiringRate(trial_no,:), Args.TrialPeakThreshold);
     end
     
     data.trial_fits = trial_fits;
     data.trial_std_threshold = trial_std_threshold;
     guess_original = guess;
-
-%     for trial_no = 1:size(binFiringRate, 1)
-%         trial_gmm_fits.("t" + trial_no) = fit_GMM(binFiringRate(trial_no,:));
-%     end
+                
+%     figure;
+%     hold all
+%     title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
+%     plot(basemapLrw, 'g'); legends{1} = sprintf('Raw');
+%     
+%     plot(basemapLsm, 'b'); legends{2} = sprintf('AdSmooth');
+%     
+%     plot(mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass');
     
-    % Check peak heights compared to baseline
-%     baseline_mean_height = mean(fit_data_valid_(:,2), 'omitnan');
-%     peak_height_from_baseline = max(fit_data_valid(:,2), [], 'omitnan') - baseline_mean_height;
     if ~isempty(guess)
-        % guess = guess(guess(:,3) > (baseline_mean_height + peak_height_from_baseline/2),:);
+            
+        keep_guess = false(size(guess,1),1);
+        fns = fieldnames(trial_fits);
+        for i = 1:size(guess,1)
+            trial_peak_check = false(size(binFiringRate,1),1);
+            for j = 1:size(binFiringRate,1)
+                trial_peak_ind = trial_fits.(fns{j})(trial_fits.(fns{j})(:,2) ~= 0,1);
+                trial_peak_multi_check = true(size(trial_peak_ind,1),1);
+                trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
+                trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
+                trial_peak_check(j) = any(trial_peak_multi_check,1);
+            end
+            if sum(trial_peak_check) > size(trial_peak_check,1)*Args.TrialPeakCheckFrac
+                keep_guess(i) = true;
+            end
+        end
+        guess = guess(keep_guess,:);
         
-%             figure;
-%             plot(fit_data_valid(:,1), fit_data_valid(:,2), 'b'); legends{1} = sprintf('Firing Rate Map');
-%             hold on
-%             % plot(fit_data_(251:1250, 1), fit_data_(251:1250, 2));
-%             plot(fit_data_(27:126, 1), fit_data_(27:126, 2),'r'); legends{2} = sprintf('Estimated Baseline');
-%             legend(legends);
-%             hold off
-        
-%             figure;
-%             hold all
-%             title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
-%             plot(basemapLrw, 'g'); legends{1} = sprintf('Raw');
+%         figure;
+%         hold all
+%         title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
+%         plot(basemapLrw, 'g'); legends{1} = sprintf('Raw');
 %         
-%             plot(basemapLsm, 'b'); legends{2} = sprintf('AdSmooth');
+%         plot(basemapLsm, 'b'); legends{2} = sprintf('AdSmooth');
 %         
-%             plot(mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass');
-%             
-%             mu_lines = [guess(:,1) [1:size(guess,1)]'];
-%             mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
-%             xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319');
-%             ax = gca;
-%             for peak_no = 1:size(guess,1)
-%                 left = guess(peak_no,1) - guess(peak_no,2);
-%                 right = guess(peak_no,1) + guess(peak_no,2);
-%                 x = [left right right left];
-%                 y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
-%                 patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none');
-%             end
+%         plot(mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass');
+%         
+%         mu_lines = [guess(:,1) [1:size(guess,1)]'];
+%         mu_lines_labels = cellstr("Field " + num2str(mu_lines(:,2)));
+%         xline(mu_lines(:,1), '--', mu_lines_labels, 'Color', '#D95319');
+%         ax = gca;
+%         for peak_no = 1:size(guess,1)
+%             left = guess(peak_no,1) - guess(peak_no,2);
+%             right = guess(peak_no,1) + guess(peak_no,2);
+%             x = [left right right left];
+%             y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
+%             patch(x, y, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none');
+%         end
         
         gaus = @(x,mu,sig,amp,vo)amp*exp(-(((x-mu).^2)/(2*sig.^2)))+vo;
         
+        y_separated = zeros(size(guess,1),100);
+        k = zeros(size(guess,1),100);
+        
         for i = 1:size(guess,1)
-            x = linspace(-25,126,152);
+            x = linspace(-24,125,150);
             mu = guess(i,1);
             sig = guess(i,2);
             amp = guess(i,3);
             vo = 0;
             y = gaus(x,mu,sig,amp,vo);
             if mu < 50
-                y(101:126) = y(1:26);
+                y(101:125) = y(1:25);
             else
-                y(27:52) = y(127:152);
+                y(26:50) = y(126:150);
             end
             % Plot gaussian
-%                     plot(x(27:126), y(27:126), 'k-', 'LineWidth',3);
+%             plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
+%             hold on
+
+            % Calculate log-likelihood
+            y_separated(i,:) = y(26:125);
+            k(i,:) = y(26:125) > 0.01;
+
         end
 %             axis([1 100 -inf inf]);
 %             yline((baseline_mean_height + peak_height_from_baseline/2),'r');
-%             % yline(peak_threshold * std(fit_data_valid_(:,2), 'omitnan'),'b');
+%             % yline(Args.PeakThreshold * std(fit_data_valid_(:,2), 'omitnan'),'b');
 %             yline(std_threshold,'b');
         
-        x = linspace(-25,126,152);
-%         if size(guess,1) == 1
-%             y = gaus(x,guess(1,1),guess(1,2),guess(1,3),vo);
-%         elseif size(guess,1) == 2
-%             y = gaus(x,guess(1,1),guess(1,2),guess(1,3),vo) + gaus(x,guess(2,1),guess(2,2),guess(2,3),vo);
-%         else
-%             y = gaus(x,guess(1,1),guess(1,2),guess(1,3),vo) + gaus(x,guess(2,1),guess(2,2),guess(2,3),vo) + gaus(x,guess(3,1),guess(3,2),guess(3,3),vo);
-%         end
-        
+        x = linspace(-24,125,150);        
         y = 0;
         for i = 1:size(guess,1)
             y = gaus(x,guess(i,1),guess(i,2),guess(i,3),vo) + y;
         end
         
 %         legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-%         plot(x(27:126), y(27:126), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM');
+%         plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM');
 %         legend(legends, 'Location', 'northeastoutside');
         
 %         figure;
@@ -427,90 +473,21 @@ if(~isempty(dir(Args.RequiredFile)))
 %                 y_ = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
 %                 patch(x_, y_, 'k', 'FaceAlpha', '0.1', 'LineStyle', 'none');
 %             end
-
-        keep_guess = false(size(guess,1),1);
-        fns = fieldnames(trial_fits);
-        for i = 1:size(guess,1)
-            trial_peak_check = false(size(binFiringRate,1),1);
-            for j = 1:size(binFiringRate,1)
-                trial_peak_ind = trial_fits.(fns{j})(trial_fits.(fns{j})(:,2) ~= 0,1);
-                trial_peak_multi_check = true(size(trial_peak_ind,1),1);
-                trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
-                trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
-                trial_peak_check(j) = any(trial_peak_multi_check,1);
-            end
-            if sum(trial_peak_check) > size(trial_peak_check,1)/3
-                keep_guess(i) = true;
-            end
-        end
-        guess = guess(keep_guess,:);
-
-%         keep_guess = false(size(guess,1),1);
-%         fns = fieldnames(trial_gmm_fits);
-%         for i = 1:size(guess,1)
-%             trial_peak_check = false(size(binFiringRate,1),1);
-%             for j = 1:size(binFiringRate,1)
-%                 if size(trial_gmm_fits.(fns{j}),1) ~= 0
-%                     for k = 1:size(trial_gmm_fits.(fns{j}),1)
-%                         trial_peak_ind = trial_gmm_fits.(fns{j})(:,1);
-%                         trial_peak_ind(trial_gmm_fits.(fns{j})(:,2) == 0) = -1;
-%                         trial_peak_multi_check = true(size(trial_peak_ind,1),1);
-%                         trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
-%                         trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
-%                     end
-%                     trial_peak_check(j) = any(trial_peak_multi_check,1);
-%                 else
-%                     trial_peak_check(j) = false;
-%                 end
-%             end
-%             if sum(trial_peak_check) > size(trial_peak_check,1)/3
-%                 keep_guess(i) = true;
-%             end
-%         end
-%         guess = guess(keep_guess,:);
-        
-%         keep_guess = false(size(guess,1),1);
-%         for i = 1:size(guess,1)
-% %             [trial_peak_value, trial_peak_ind] = max(binFiringRate,[], 2, 'omitnan');
-% %             trial_peak_ind(trial_peak_value == 0) = -1;
-% %             trial_peak_check = true(size(binFiringRate_,1),1);
-% %             trial_peak_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
-% %             trial_peak_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
-%             
-%               [trial_peak_value, trial_peak_ind] = maxk(binFiringRate_, 10, 2);
-%               trial_peak_ind(trial_peak_value == 0) = -1;
-%               
-%               trial_peak_multi_check = true(size(binFiringRate_,1),10);
-%               trial_peak_multi_check(trial_peak_ind < (guess(i,1) - guess(i,2))) = false;
-%               trial_peak_multi_check(trial_peak_ind > (guess(i,1) + guess(i,2))) = false;
-%               trial_peak_check = any(trial_peak_multi_check,2);
-%                          
-%             if sum(trial_peak_check) > size(trial_peak_check,1)/2
-%                 keep_guess(i) = true;
-%                 leftBin = ceil(guess(i,1) - guess(i,2));
-%                 rightBin = floor(guess(i,1) + guess(i,2));
-%                 if (leftBin >= 1 && leftBin <= 100) && (rightBin >= 1 && rightBin <= 100)
-%                     binFiringRate_(:,leftBin:rightBin) = 0;
-%                 elseif leftBin < 1
-%                     leftBin = 100 - leftBin;
-%                     binFiringRate_(:,leftBin:100) = 0;
-%                     binFiringRate_(:,1:rightBin) = 0;
-%                 elseif rightBin > 100
-%                     rightBin = rightBin - 100;
-%                     binFiringRate_(:,leftBin:100) = 0;
-%                     binFiringRate_(:,1:rightBin) = 0;
-%                 end
-%             end
-%         end
-%         guess = guess(keep_guess,:);
         
         if ~isempty(guess)
-            % Calculate RMSE
-            rmse = sqrt(mean((mapLsm_FFT_Low_Pass_padded - y).^2,'omitnan'));
-            nrmse_mean = rmse / mean(mapLsm_FFT_Low_Pass_padded, 'omitnan');
-            nrmse_stdev = rmse / std(mapLsm_FFT_Low_Pass_padded, 'omitnan');
+            % Calculate accuracy metrics
+            rmse = sqrt(mean((basemapLrw - y(26:125)).^2,'omitnan'));
+            nrmse_mean = rmse / mean(basemapLrw, 'omitnan');
+            nrmse_stdev = rmse / std(basemapLrw, 'omitnan');
             auc = mean(abs(y ./ mapLsm_FFT_Low_Pass_padded), 'omitnan');
-            guess(:,4) = (guess(:,3) - mean(fit_data_(27:126, 2),'omitnan')) / std(fit_data_(27:126, 2),'omitnan'); % Height z-score
+            rss = sum((basemapLrw - y(26:125)).^2, 'omitnan');
+            aic_old = 100*log(rss/100) + 2*size(guess,1); %+ ((2*size(guess,1)*(size(guess,1)+1))/(100-size(guess,1)-1));
+            bic_old = 100*log(rss/100) + size(guess,1)*log(100);
+            log_likelihood = sum(k .* log(y_separated),'all','omitnan');
+            aic = -2*log_likelihood + 2*size(guess,1);
+            bic = -2*log_likelihood + size(guess,1)*log(100);
+            
+            guess(:,4) = (guess(:,3) - mean(fit_data_(26:125, 2),'omitnan')) / std(fit_data_(26:125, 2),'omitnan'); % Height z-score
             
             data.basemapLrw = basemapLrw;
             data.basemapLsm = basemapLsm;
@@ -522,11 +499,12 @@ if(~isempty(dir(Args.RequiredFile)))
             data.nrmse_mean = nrmse_mean;
             data.nrmse_stdev = nrmse_stdev;
             data.auc = auc;
+            data.log_likelihood = log_likelihood;
+            data.aic = aic;
+            data.bic = bic;
         end
     end
-    
-%     data.trial_gmm_fits = trial_gmm_fits;
-    
+       
     if isempty(guess)
         data.basemapLrw = basemapLrw;
         data.basemapLsm = basemapLsm;
@@ -538,6 +516,9 @@ if(~isempty(dir(Args.RequiredFile)))
         data.nrmse_mean = NaN;
         data.nrmse_stdev = NaN;
         data.auc = NaN;
+        data.log_likelihood = NaN;
+        data.aic = NaN;
+        data.bic = NaN;
     end
     
     % create nptdata so we can inherit from it
@@ -566,172 +547,21 @@ n = nptdata(0,0);
 d.data = data;
 obj = class(d,Args.classname,n);
 
-function trial_gmm_fits = fit_GMM(ratemap)
-
-    %ratemap = binFiringRate(trial_no,:);
-    mapLsm_FFT_Low_Pass_padded = [ratemap(75:100) ratemap ratemap(1:26)];
-    
-    fit_data = [-25:1:126; mapLsm_FFT_Low_Pass_padded]';
-    fit_data_valid = fit_data(27:126,:);
-    
-    guess = []; % Mean (Centre Bin), Std (Half-Width), Height (Rate)
-    fit_data_ = fit_data;
-    fit_data_valid_ = fit_data_valid;
-    peak_threshold = 6; % Multiples of stdev of height
-    min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
-    min_gauss_std = 0;
-    max_gauss_std = 12.5;
-    gauss_overlap_threshold = 0.5;
-    
-    while size(guess,1) < 50
-        % Find max peak
-        [max_height, max_bin_idx] = max(fit_data_valid_(:,2), [], 'omitnan');
-        max_bin = fit_data_valid_(max_bin_idx);
-%         % Stop searching for peaks once height drops below height threshold
-%         if max_height <= peak_threshold * std(fit_data_valid_(:,2), 'omitnan')
-%             break
-%         end
-        
-        % Set the guess parameters for gaussian fitting
-        guess_bin = max_bin; % Mean
-        guess_height = max_height; % Height
-        
-        % Halt fitting process if peak drops below minimum height
-        if guess_height < min_peak_height
-            break
-        end
-        
-        % Find half height index on each side of the center bin (gaussian mean)
-        half_height = 0.5 * max_height;
-        max_bin_idx_ = find(fit_data_(:,1) == max_bin);
-        left_idx = find(fit_data_(1:max_bin_idx_,2) <= half_height, 1, 'last');
-        left_side = fit_data_(left_idx,1);
-        right_idx = find(fit_data_(max_bin_idx_:end,2) <= half_height, 1, 'first') + max_bin_idx_ - 1;
-        right_side = fit_data_(right_idx,1);
-        
-        % Use shorter side
-        if isempty(left_side)
-            shorter_width = abs(right_side - max_bin);
-        elseif isempty(right_side)
-            shorter_width = abs(left_side - max_bin);
-        elseif isempty(left_side) && isempty(right_side)
-            shorter_width = 10000;
-        else
-            shorter_width = min(abs(left_side - max_bin), abs(right_side - max_bin));
-        end
-        fwhm = shorter_width * 2;
-        guess_std = fwhm / (2 * sqrt(2 * log(2)));
-        
-        % Check that gaussian std are within limits
-        %         if guess_std < min_gauss_std
-        %             guess_std = min_gauss_std;
-        %         end
-        %         if guess_std > max_gauss_std
-        %             guess_std = max_gauss_std;
-        %         end
-        
-%         % Halt fitting process if peak drops below minimum height
-%         if guess_std == 0
-%             break
-%         end
-        guess = [guess; [guess_bin, guess_std, guess_height]];
-        
-        ys = zeros(size(fit_data,1),1);
-        ys = ys + guess_height * exp(-(fit_data(:,1)-guess_bin).^2 / (2*(guess_std.^2)));
-        fit_data_(:,2) = fit_data_(:,2) - ys;
-        %fit_data_valid_ = fit_data_(251:1250,:);
-        fit_data_valid_ = fit_data_(27:126,:);
-    end
-    
-    % Check peak heights compared to baseline
-    std_threshold = peak_threshold * std(fit_data_valid_(:,2), 'omitnan');
-    baseline_mean_height = mean(fit_data_valid_(:,2), 'omitnan');
-    peak_height_from_baseline = max(fit_data_valid(:,2), [], 'omitnan') - baseline_mean_height;
-    
-    guess = []; % Mean (Centre Bin), Std (Half-Width), Height (Rate)
-    fit_data_ = fit_data;
-    fit_data_valid_ = fit_data_valid;
-    
-    % . Find peak: Loop through, finding a candidate peak, and fitting with a guess gaussian
-    %   Stopping procedures: limit on # of peaks, or relative or absolute height thresholds
-    while size(guess,1) < 50
-        % Find max peak
-        [max_height, max_bin_idx] = max(fit_data_valid_(:,2), [], 'omitnan');
-        max_bin = fit_data_valid_(max_bin_idx);
-        % Stop searching for peaks once height drops below height threshold
-        if max_height <= std_threshold %peak_threshold * std(fit_data_valid_(:,2), 'omitnan')
-            break
-        end
-        
-        % Set the guess parameters for gaussian fitting
-        guess_bin = max_bin; % Mean
-        guess_height = max_height; % Height
-        
-        % Halt fitting process if peak drops below minimum height
-        if guess_height < (baseline_mean_height + peak_height_from_baseline/2) %min_peak_height
-            break
-        end
-        
-        % Find half height index on each side of the center bin (gaussian mean)
-        half_height = 0.5 * max_height;
-        max_bin_idx_ = find(fit_data_(:,1) == max_bin);
-        left_idx = find(fit_data_(1:max_bin_idx_,2) <= half_height, 1, 'last');
-        left_side = fit_data_(left_idx,1);
-        right_idx = find(fit_data_(max_bin_idx_:end,2) <= half_height, 1, 'first') + max_bin_idx_ - 1;
-        right_side = fit_data_(right_idx,1);
-        
-        % Use shorter side
-        if isempty(left_side)
-            shorter_width = abs(right_side - max_bin);
-        elseif isempty(right_side)
-            shorter_width = abs(left_side - max_bin);
-        elseif isempty(left_side) && isempty(right_side)
-            shorter_width = 10000;
-        else
-            shorter_width = min(abs(left_side - max_bin), abs(right_side - max_bin));
-        end
-        fwhm = shorter_width * 2;
-        guess_std = fwhm / (2 * sqrt(2 * log(2)));
-        
-        % Check that gaussian std are within limits
-        %         if guess_std < min_gauss_std
-        %             guess_std = min_gauss_std;
-        %         end
-        %         if guess_std > max_gauss_std
-        %             guess_std = max_gauss_std;
-        %         end
-        
-        guess = [guess; [guess_bin, guess_std, guess_height]];
-        
-        ys = zeros(size(fit_data,1),1);
-        ys = ys + guess_height * exp(-(fit_data(:,1)-guess_bin).^2 / (2*(guess_std.^2)));
-        fit_data_(:,2) = fit_data_(:,2) - ys;
-        %fit_data_valid_ = fit_data_(251:1250,:);
-        fit_data_valid_ = fit_data_(27:126,:);
-    end
-    trial_gmm_fits = guess;
-    %trial_gmm_fits.("t" + trial_no) = guess;
-
-
-function [trial_fits, trial_std_threshold] = fit_trial(ratemap)
+function [trial_fits, trial_std_threshold] = fit_trial(ratemap, TrialPeakThreshold)
     
 %     for trial_no = 1:size(binFiringRate, 1)
 %     ratemap = binFiringRate(trial_no,:);
-    mapLsm_FFT_Low_Pass_padded = [ratemap(75:100) ratemap ratemap(1:26)];
+    mapLsm_FFT_Low_Pass_padded = [ratemap(76:100) ratemap ratemap(1:25)];
     
-    fit_data = [-25:1:126; mapLsm_FFT_Low_Pass_padded]';
-    fit_data_valid = fit_data(27:126,:);
+    fit_data = [-24:1:125; mapLsm_FFT_Low_Pass_padded]';
+    fit_data_valid = fit_data(26:125,:);
     
     fit_data_ = fit_data;
     fit_data_valid_ = fit_data_valid;
-    peak_threshold = 3; % Multiples of stdev of height
-    min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
-    min_gauss_std = 0;
-    max_gauss_std = 12.5;
-    gauss_overlap_threshold = 0.5;
+    %min_peak_height = max(fit_data_valid_(:,2), [], 'omitnan') * 0.5;
   
     % Check peak heights compared to baseline
-    std_threshold = peak_threshold * std(fit_data_valid_(:,2), 'omitnan');
+    std_threshold = TrialPeakThreshold * std(fit_data_valid_(:,2), 'omitnan');
     
     fit_data_ = fit_data;
     fit_data_valid_ = fit_data_valid;

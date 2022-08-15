@@ -15,13 +15,13 @@ function [obj, varargout] = mtneuraldata(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session','RequiredFile','cells_list.txt', 'NumericArguments', [], ...
-				'BinSize',100, 'ThresVel',0);
+				'BinSize',100, 'ThresVel',1, 'FiltFrac',0.6, 'PeakThreshold',3, 'TrialPeakThreshold',1, 'TrialPeakCheckFrac',2/3);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'BinSize', 'ThresVel'};                         
+Args.DataCheckArgs = {'BinSize', 'ThresVel', 'FiltFrac', 'PeakThreshold', 'TrialPeakThreshold', 'TrialPeakCheckFrac'};                         
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -93,7 +93,8 @@ if(~isempty(dir(Args.RequiredFile)))
         end
         
         try
-            mtplacefield('auto', 'save', 'redo');
+            mtplacefield('auto','save','redo', ... 
+                            'FiltFrac',Args.FiltFrac,'PeakThreshold',Args.PeakThreshold,'TrialPeakThreshold',Args.TrialPeakThreshold,'TrialPeakCheckFrac',Args.TrialPeakCheckFrac);
         catch
             mtplacefield_failed = cat(1,mtplacefield_failed, cell_idx);
         end
@@ -134,10 +135,17 @@ if(~isempty(dir(Args.RequiredFile)))
     data.cellData = orderfields(data.cellData);
     data.placefieldData = orderfields(data.placefieldData);
     
+    data.sessData.data_trial = sessionData.data_trial;
+    data.sessData.tsF = sessionData.tsF;
+    data.sessData.dF_F0_corrected = sessionData.dF_F0_corrected;
+    
     rmse = zeros(length(cells_list), 2);
     nrmse_mean = zeros(length(cells_list), 2);
     nrmse_stdev = zeros(length(cells_list), 2);
     auc = zeros(length(cells_list), 2);
+    log_likelihood = zeros(length(cells_list), 2);
+    aic = zeros(length(cells_list), 2);
+    bic = zeros(length(cells_list), 2);
     placecellStats = zeros(length(cells_list), 4);
     placefieldStats = [];
     fns = fieldnames(data.placefieldData);
@@ -146,12 +154,22 @@ if(~isempty(dir(Args.RequiredFile)))
         nrmse_mean(i,1) = i;
         nrmse_stdev(i,1) = i;
         auc(i,1) = i;
+        log_likelihood(i,1) = i;
+        aic(i,1) = i;
+        bic(i,1) = i;
         placecellStats(i,1) = i;
-        if ~isempty(data.placefieldData.(fns{i})) && logical(data.isplacecell(i,5))
+        if ~isempty(data.placefieldData.(fns{i})) && logical(data.isplacecell(i,4))
             rmse(i,2) = data.placefieldData.(fns{i}).rmse;
             nrmse_mean(i,2) = data.placefieldData.(fns{i}).nrmse_mean;
             nrmse_stdev(i,2) = data.placefieldData.(fns{i}).nrmse_stdev;
             auc(i,2) = data.placefieldData.(fns{i}).auc;
+            try
+                log_likelihood(i,2) = data.placefieldData.(fns{i}).log_likelihood;
+            catch
+                data.placefieldData.(fns{i})
+            end
+            aic(i,2) = data.placefieldData.(fns{i}).aic;
+            bic(i,2) = data.placefieldData.(fns{i}).bic;
             placecellStats(i,2) = size(data.placefieldData.(fns{i}).GMM,1); % No. of place fields
             placecellStats(i,3) = mean(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Mean firing rate
             placecellStats(i,4) = std(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Stdev firing rate
@@ -166,9 +184,12 @@ if(~isempty(dir(Args.RequiredFile)))
             nrmse_mean(i,2) = NaN;
             nrmse_stdev(i,2) = NaN;
             auc(i,2) = NaN;
+            log_likelihood(i,2) = NaN;
+            aic(i,2) = NaN;
+            bic(i,2) = NaN;
             placecellStats(i,2) = NaN;
-            placecellStats(i,3) = NaN;
-            placecellStats(i,4) = NaN;
+            placecellStats(i,3) = mean(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Mean firing rate
+            placecellStats(i,4) = std(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Stdev firing rate
         end
     end
     
@@ -177,10 +198,29 @@ if(~isempty(dir(Args.RequiredFile)))
 %     nrmse_stdev_sort = sortrows(nrmse_stdev,2);
 %     auc_sort = sortrows(auc,2);
     
+    data.rmse = rmse;
+    data.nrmse_mean = nrmse_mean;
+    data.nrmse_stdev = nrmse_stdev;
+    data.auc = auc;
+    data.log_likelihood = log_likelihood;
+    data.aic = aic;
+    data.bic = bic;
     data.placecellStats = placecellStats;
     data.placefieldStats = placefieldStats;
     data.nTrials = sessionData.nTrials;
     data.nNeuron = sessionData.nNeuron;
+    
+    % Bayesian Decoding
+%     tsFindex = sessionData.tsFindex;
+%     tsF = sessionData.tsF;
+%     trialNo = sessionData.session_data_raw(tsFindex,2);
+%     nTrial = sessionData.nTrial;
+%     pos_downsample = sessionData.session_data_raw(tsFindex,7);
+%     pos_bin_downsample = sessionData.session_data_raw(tsFindex,3);
+%     spd_downsample = spd(tsFindex);
+%     lick_downsample = Lick_raw(tsFindex);
+    
+    
     
     % create nptdata so we can inherit from it
     data.numSets = 0;

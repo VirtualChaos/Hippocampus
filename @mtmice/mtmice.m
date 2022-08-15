@@ -15,7 +15,7 @@ function [obj, varargout] = mtmice(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Mice','RequiredFile','', 'NumericArguments', [], ...
-				'BinSize',100, 'ThresVel',0);
+				'BinSize',100, 'ThresVel',0, 'Training',0);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -75,33 +75,68 @@ if(true) % ~isempty(dir(Args.RequiredFile))
     
     for i = 1:size(subFolders,1)
         current_folder = subFolders(i).name;
-        if  current_folder(1) == '2' && current_folder(2) == '0' && current_folder(3) == '2'
+        if Args.Training
+            foldername_check = current_folder(1) == 'I' && current_folder(2) == 'D';
+        else
+            foldername_check = current_folder(1) == '2' && current_folder(2) == '0' && current_folder(3) == '2';
+        end
+        if  foldername_check
             
             cd(current_folder);
             
-            if isfile('mtsess.mat')
-                tic
-                session_no = session_no + 1;
-                fprintf("Session %d: %s\n", session_no, current_folder);
-                sessionData = mtsess('auto').data;
+            tic
+            session_no = session_no + 1;
+            fprintf("Session %d: %s\n", session_no, current_folder);
+            if Args.Training
+                if ~isfile('mtsess.mat') || (Args.RedoLevels)
+                    sessionData = mtsess('auto','redo','save','Spikes',0).data;
+                else
+                    sessionData = mtsess('auto','Spikes',0).data;
+                end
+            else
+                if ~isfile('mtsess.mat') || (Args.RedoLevels)
+                    sessionData = mtsess('auto','redo','save').data;
+                else
+                    sessionData = mtsess('auto').data;
+                end
+            end
+            
+            if Args.Training
+                temp_numbers = regexp(current_folder,'[0-9]','match');
+                sessionData.date = strjoin(temp_numbers(3:10),'');
+            else
                 sessionData.date = current_folder;
-                sessionCombined.("s" + session_no) = sessionData;
+            end
+            sessionCombined.("s" + session_no) = sessionData;
+            
+            if ~Args.Training
                 
                 cd cells
-                neuralData = mtneuraldata('auto','save').data;
+                neuralData = mtneuraldata('auto','redo','save').data;
                 neuralData.date = current_folder;
                 neuralCombined.("s" + session_no) = neuralData;
                 cd ..
-                toc
+                
             end
+            toc
             
             cd(ori);
         end
     end
     
+    sessionDays = zeros(size(fieldnames(sessionCombined),1),1);
+    datetime_origin = datetime(str2num(sessionCombined.s1.date(1:4)), str2num(sessionCombined.s1.date(5:6)), str2num(sessionCombined.s1.date(7:8)));;
+    sessionDays(1) = 1;
+    for sess_no = 2:size(fieldnames(sessionCombined),1)
+        sessionData = sessionCombined.("s" + sess_no);
+        datetime_current = datetime(str2num(sessionData.date(1:4)), str2num(sessionData.date(5:6)), str2num(sessionData.date(7:8)));
+        sessionDays(sess_no) = days(datetime_current - datetime_origin) + 1;
+    end
+    
     data.sessionCombined = sessionCombined;
     data.neuralCombined = neuralCombined;
-
+    data.sessionDays = sessionDays;
+    
     % create nptdata so we can inherit from it
     data.numSets = 0;
     data.Args = Args;

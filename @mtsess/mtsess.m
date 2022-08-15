@@ -150,6 +150,7 @@ if Args.Spikes
     data.nNeuron = nNeuron;
     data.F = F;
     data.Fc = Fc;
+    data.tsFindex = tsFindex;
     data.tsF = tsF;
     % data.spikes = spikes;
     data.spikes_corrected = spikes_corrected;
@@ -349,7 +350,7 @@ lick_count = session_data_exclude_zero_trials(:,6) < 0; % Resetting array to 0
 lick_count(lick_count_idx) = 1;
 lick_count = cat(2, session_data_exclude_zero_trials(:,1:3), lick_count);
 lick_count_vel_filt = lick_count;
-lick_count_vel_filt(find(velocity_averaged_(:,4) < Args.ThresVel),4) = 0; % Ignore lick when smoothed velocity <= 5 cm/s
+lick_count_vel_filt(find(velocity_averaged_(:,4) < Args.ThresVel),4) = 0; % Ignore lick when smoothed velocity <= threshold
 session_data_exclude_zero_trials = cat(2, session_data_exclude_zero_trials, lick_count(:,4), lick_count_vel_filt(:,4));
 
 lick_timestamps = session_data_exclude_zero_trials(logical(lick_count_vel_filt(:,4)),[1:4]);
@@ -394,6 +395,68 @@ lick_binned(:,3) = lick_binned(:,1) ./ lick_binned(:,2); % Calculate lick rate
 % hold on
 % plot(session_data_exclude_zero_trials(:,1), lick_count_vel_filt(:,4)*250, 'g');
 
+% Lick frequency
+lick_freq_idx = find(diff(session_data_exclude_zero_trials(:,6)) == 1) + 1;
+if session_data_exclude_zero_trials(1,6) == 1
+    lick_freq_idx = [1; lick_freq_idx];
+end
+if session_data_exclude_zero_trials(end,6) == 1
+    lick_freq_idx = [lick_freq_idx [find(diff(session_data_exclude_zero_trials(:,6)) == -1); size(session_data_exclude_zero_trials,1)]];
+else
+   lick_freq_idx = [lick_freq_idx find(diff(session_data_exclude_zero_trials(:,6)) == -1)];
+end
+lick_freq_idx = [lick_freq_idx (session_data_exclude_zero_trials(lick_freq_idx(:,2),1) - session_data_exclude_zero_trials(lick_freq_idx(:,1),1))];
+lick_freq_idx = [lick_freq_idx 1./lick_freq_idx(:,3)];
+
+lick_freq = zeros(size(session_data_exclude_zero_trials(:,6),1),1); % Resetting array to 0
+for i = 1:size(lick_freq_idx,1)
+    lick_freq(lick_freq_idx(i,1):lick_freq_idx(i,2)) = lick_freq_idx(i,4);
+end
+
+lick_freq_vel_filt = lick_freq;
+lick_freq_vel_filt(find(velocity_averaged_(:,4) < Args.ThresVel)) = 0;
+
+% Lick burst
+lick_burst_idx = [];
+first_idx = lick_freq_idx(1,1);
+for i = 1:size(lick_freq_idx,1)
+    second_idx = lick_freq_idx(i,2);
+    
+    if i < size(lick_freq_idx,1)
+        next_first_idx = lick_freq_idx(i+1,1);
+        
+        if second_idx + 5000 < next_first_idx % 5000 indices = 1 sec
+            lick_burst_idx = [lick_burst_idx; [first_idx second_idx]];
+            first_idx = next_first_idx;
+        end
+    else
+        lick_burst_idx = [lick_burst_idx; [first_idx second_idx]];
+    end
+end
+
+lick_burst_idx = [lick_burst_idx 0.0002*(lick_burst_idx(:,2) - lick_burst_idx(:,1))]; % Lick burst duration (secs)
+lick_burst_idx = [lick_burst_idx session_data_exclude_zero_trials(lick_burst_idx(:,1),4) session_data_exclude_zero_trials(lick_burst_idx(:,2),4)]; % Lick burst start and end bin
+
+lick_burst = zeros(size(session_data_exclude_zero_trials(:,6),1),1); % Resetting array to 0
+for i = 1:size(lick_burst_idx,1)
+    lick_burst(lick_burst_idx(i,1):lick_burst_idx(i,2)) = 1;
+end
+
+lick_burst_vel_filt = lick_burst;
+lick_burst_vel_filt(find(velocity_averaged_(:,4) < Args.ThresVel)) = 0;
+
+lick_RZ_confidence = zeros(1,100); % RZ confidence based on bins with lick bursts
+for lick_no = 1:size(lick_burst_idx,1)
+    for lick_sub_no = lick_burst_idx(lick_no,4):lick_burst_idx(lick_no,5)
+        if mod(lick_sub_no,100) == 0
+            temp_lick_sub_no = 100;
+        else
+            temp_lick_sub_no = mod(lick_sub_no,100);
+        end
+        lick_RZ_confidence(temp_lick_sub_no) = lick_RZ_confidence(temp_lick_sub_no) + 1;
+    end
+end
+
 sessionMidpoint = find(session_data_exclude_zero_trials(:,2) == ceil(nTrials/2)+1, 1, 'first');
 
 data.Args = Args;
@@ -408,6 +471,13 @@ data.lick_timestamps_spliced = lick_timestamps_spliced;
 data.lick_timestamps_adjusted = lick_timestamps_adjusted;
 data.lick_count_binned = lick_count_binned;
 data.lick_binned = lick_binned;
+data.lick_freq_idx = lick_freq_idx;
+data.lick_freq = lick_freq;
+data.lick_freq_vel_filt = lick_freq_vel_filt;
+data.lick_burst_idx = lick_burst_idx;
+data.lick_burst = lick_burst;
+data.lick_burst_vel_filt = lick_burst_vel_filt;
+data.lick_RZ_confidence = lick_RZ_confidence;
 
 % create nptdata so we can inherit from it
 data.numSets = 0;
@@ -417,7 +487,7 @@ d.data = data;
 obj = class(d,Args.classname,n);
 saveObject(obj,'ArgsC',Args);
 
-if Args.Spikes
+if Args.Spikes & ~isfolder('cells')
     % Make cell directories and save spiketimes
     mkdir cells
     cd cells

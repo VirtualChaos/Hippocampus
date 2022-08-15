@@ -9,9 +9,9 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, ...
-              'BinFiringRate',0, 'TrialBinFiringRate',0, 'Baseline',0, 'GMM',0, 'TrialGMM',0, 'TrialFits',0,  'AlphaAdSm', 0);
-Args.flags ={'ObjectLevel','AnalysisLevel'};
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'MatchedFiringRateMap',0,'MatchedCorrMatrix',0,'PlaceFieldPositionEntropy',0,...
+                'AdSm',0,'Lick',0);
+Args.flags = {'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
 % set variables to default
@@ -23,11 +23,10 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
-elseif (Args.FiringRateMapRaw | Args.FiringRateMapAdSm | Args.BinFiringRate | Args.Baseline | Args.GMM | Args.AlphaAdSm)
-    % r = length(fieldnames(obj.data.cellData));
-    r = obj.data.nNeuron;
-elseif (Args.TrialBinFiringRate | Args.TrialGMM | Args.TrialFits)
-    r = obj.data.nTrials*obj.data.nNeuron;
+elseif (Args.MatchedFiringRateMap | Args.MatchedCorrMatrix)
+    r = size(obj.data.roiMatchData.allSessionMapping,1);
+elseif(Args.Lick)
+    r = size(fieldnames(obj.data.sessionCombined),1);
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way

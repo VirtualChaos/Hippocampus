@@ -12,7 +12,7 @@ function [r,varargout] = get(obj,varargin)
 Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'VelRaw',0, 'TrialVelRaw', 0, 'TrialVel',0, 'Vel',0, ...
               'TrialVelFilt',0, 'VelBinned',0, 'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, ...
               'LickDistribution',0, 'TrialLickDistribution',0, 'LickBinned',0, 'TrialLickBinned',0, ...
-              'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ', 0);
+              'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ',0, 'LickFreq',0, 'TrialLickFreq',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -26,7 +26,8 @@ elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
 elseif (Args.TrialVelRaw | Args.TrialVel | Args.TrialVelFilt | Args.TrialWaterLick | ...
-        Args.TrialLickDistribution | Args.TrialLickBinned | Args.TrialLickRate | Args.TrialLick)
+        Args.TrialLickDistribution | Args.TrialLickBinned | Args.TrialLickRate | Args.TrialLick | ...
+        Args.TrialLickFreq)
     r = obj.data.nTrials;
 else
 	% if we don't recognize and of the options, pass the call to parent

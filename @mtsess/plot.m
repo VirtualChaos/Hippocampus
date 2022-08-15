@@ -6,11 +6,12 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
           'VelRaw',0, 'TrialVelRaw',0, 'Vel',0, 'TrialVel',0, 'TrialVelFilt',0, 'VelBinned',0, ...
           'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, 'LickDistribution',0, 'TrialLickDistribution',0, ...
-          'LickBinned',0, 'TrialLickBinned',0, 'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ', 0);
+          'LickBinned',0, 'TrialLickBinned',0, 'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ',0, ...
+          'LickFreq',0,'TrialLickFreq',0);
 Args.flags = {'LabelsOff','ArgsOnly','VelRaw','TrialVelRaw','Vel', 'TrialVel', 'TrialVelFilt', ...
               'VelBinned', 'VelCount', 'WaterLick','TrialWaterLick', ...
               'TrialLickDistribution', 'LickDistribution', 'LickBinned', 'TrialLickBinned', ...
-              'LickRate', 'TrialLickRate', 'TrialLick', 'LickRZ'};
+              'LickRate', 'TrialLickRate', 'TrialLick', 'LickRZ', 'LickFreq', 'TrialLickFreq'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -148,6 +149,66 @@ if(~isempty(Args.NumericArguments))
 
         plot(lick_reward_zone_prc); title('Lick % (Reward Zone) < 5 sec'); xlabel('Bins'); ylabel('No. of Licks (%)');
 
+    elseif(Args.LickFreq)
+        % Lick Bursts
+        subplot(2,1,1);
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,5)*2, 'b'); xlabel('Time (s)');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,6), 'r'); title('Licks'); xlabel('Time (s)');
+        hold off
+        
+        subplot(2,1,2);
+        %yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.session_data_exclude_zero_trials(:,7)*100, 'b'); title('Lick Bursts'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(:,3), 'r');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.lick_burst(:)*80, 'k-');
+%         yyaxis right
+%         plot(obj.data.session_data_exclude_zero_trials(:,1), obj.data.velocity_averaged(:,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
+        hold off
+        
+    elseif(Args.TrialLickFreq)
+        % Trial Lick Frequency
+        trial = n;
+        plot_start_idx = obj.data.TrialTime_idx(trial,1);
+        plot_end_idx = obj.data.TrialTime_idx(trial,2);
+                
+        subplot(5,1,1);
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,5)*2, 'r'); xlabel('Time (s)');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,6), 'k'); title('Licks'); xlabel('Time (s)');
+        hold off
+        
+        subplot(5,1,2);
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,5)*30, 'r'); xlabel('Time (s)');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
+        hold off
+        
+        subplot(5,1,3);
+        yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_count(plot_start_idx:plot_end_idx,4)*100, 'k');
+        yyaxis right
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged(plot_start_idx:plot_end_idx,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
+        hold off
+        
+        subplot(5,1,4);
+        yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
+        hold on
+        yyaxis right
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
+        hold off
+        
+        subplot(5,1,5);
+        yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_burst(plot_start_idx:plot_end_idx)*80, 'k-');
+        yyaxis right
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged(plot_start_idx:plot_end_idx,4)); title('Lick Burst'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
+        hold off
         
 % 	else
 % 		% code to plot yet another kind of plot
