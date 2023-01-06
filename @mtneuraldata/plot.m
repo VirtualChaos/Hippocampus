@@ -6,10 +6,10 @@ Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
           'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, 'BinFiringRate',0, ...
           'TrialBinFiringRate', 0, 'Baseline',0, 'GMM',0, 'TrialFits',0, 'AlphaAdSm',0, ...
-          'FluorescenceTrace',0, 'TrialFluorescenceTrace',0);
+          'FluorescenceTrace',0, 'TrialFluorescenceTrace',0, 'PlaceFieldPositionEntropy',0);
 Args.flags = {'LabelsOff','ArgsOnly','FiringRateMapRaw','FiringRateMapAdSm','BinFiringRate', ...
               'TrialBinFiringRate','Baseline','GMM', 'TrialFits', 'AlphaAdSm', ...
-              'FluorescenceTrace','TrialFluorescenceTrace'};
+              'FluorescenceTrace','TrialFluorescenceTrace','PlaceFieldPositionEntropy'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -67,6 +67,20 @@ if(~isempty(Args.NumericArguments))
         %colorbar;
         hold on
         
+%         subplot(3,1,2);
+%         % Adaptive Smoothed Firing Rate Map
+%         cell_no = n;
+%         fns = fieldnames(obj.data.placefieldData);
+%         
+%         binFiringRate = obj.data.cellData.(fns{cell_no}).binFiringRate;
+%         binFiringRate(binFiringRate < obj.data.placefieldData.(fns{cell_no}).mean_threshold + obj.data.placefieldData.(fns{cell_no}).std_threshold) = 0;
+%         imagesc(binFiringRate); title('Trial Firing Rates'); xlabel('Position Bins'); ylabel('Trials');
+%         
+%         %imagesc(obj.data.cellData.(fns{cell_no}).binFiringRate); title('Trial Firing Rates'); xlabel('Position Bins'); ylabel('Trials');
+%         hold on
+%         %colorbar;
+%         hold on
+        
         fns = fieldnames(obj.data.placefieldData);
         
         if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,4)
@@ -89,19 +103,26 @@ if(~isempty(Args.NumericArguments))
         fns = fieldnames(obj.data.placefieldData);
         
         subplot(2,1,2);
-        title('Firing Rate Map'); xlabel('Position Bins'); ylabel('Firing Rate (spike/sec)');
+        title('Firing Rate Map'); xlabel('Position (Bin)'); ylabel('Firing Rate');
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLrw, 'g'); legends{1} = sprintf('Raw'); hold on
         
         plot(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 'b'); legends{2} = sprintf('AdSmooth'); hold on
         
-        plot(imgaussfilt(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 3), 'c'); legends{2} = sprintf('AdSmooth'); hold on
+        %plot(imgaussfilt(obj.data.placefieldData.(fns{cell_no}).basemapLsm, 3), 'c'); legends{2} = sprintf('AdSmooth'); hold on
                 
         plot(obj.data.placefieldData.(fns{cell_no}).mapLsm_FFT_Low_Pass, 'r'); legends{3} = sprintf('AdSm-FFT-Low-Pass'); hold on
         
         axis([1 100 -inf inf]);
-        yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
-        yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
-        yline(obj.data.placefieldData.(fns{cell_no}).std_threshold / obj.data.placefieldData.(fns{cell_no}).Args.PeakThreshold,'b--'); hold on
+        yline(obj.data.placefieldData.(fns{cell_no}).mean_threshold,'b-'); hold on
+        yline(obj.data.placefieldData.(fns{cell_no}).mean_threshold + obj.data.placefieldData.(fns{cell_no}).std_threshold,'b--'); hold on
+        yline(obj.data.placefieldData.(fns{cell_no}).mean_threshold - obj.data.placefieldData.(fns{cell_no}).std_threshold,'b--'); hold on
+%         yline((obj.data.placefieldData.(fns{cell_no}).baseline_mean_height + obj.data.placefieldData.(fns{cell_no}).peak_height_from_baseline/2),'r'); hold on
+%         yline(obj.data.placefieldData.(fns{cell_no}).std_threshold,'b'); hold on
+%         yline(obj.data.placefieldData.(fns{cell_no}).std_threshold / obj.data.placefieldData.(fns{cell_no}).Args.PeakThreshold,'b--'); hold on
+                
+        text(3, 1.3*max(obj.data.placefieldData.(fns{cell_no}).basemapLrw), {"Mean: " + obj.data.placefieldData.(fns{cell_no}).mean_threshold, "StDev: " + obj.data.placefieldData.(fns{cell_no}).std_threshold, ...
+            "VMR: " + obj.data.placefieldData.(fns{cell_no}).vmr_threshold},'FontSize',12); %"CV: " + obj.data.placefieldData.(fns{cell_no}).cv_threshold,
+        ylim([0 1.7*max(obj.data.placefieldData.(fns{cell_no}).basemapLrw)])
         
         if ~isempty(obj.data.placefieldData.(fns{cell_no}).GMM) & obj.data.isplacecell(cell_no,4)
             mu_lines = [obj.data.placefieldData.(fns{cell_no}).GMM(:,1) [1:size(obj.data.placefieldData.(fns{cell_no}).GMM,1)]'];
@@ -131,7 +152,7 @@ if(~isempty(Args.NumericArguments))
                     y(26:50) = y(126:150);
                 end
                 % Plot gaussian
-                % plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
+                plot(x(26:125), y(26:125), 'k-', 'LineWidth',3);
             end
             
             x = linspace(-24,125,150);         
@@ -141,7 +162,7 @@ if(~isempty(Args.NumericArguments))
             end
             
             legends{4} = ''; legends{5} = ''; legends{6} = ''; legends{7} = ''; legends{8} = ''; legends{9} = '';
-            plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
+            %plot(x(26:125), y(26:125), 'k-', 'LineWidth',3); legends{10} = sprintf('GMM'); hold on
             %legend(legends, 'Location', 'northeastoutside');
         end
         hold off
@@ -372,6 +393,25 @@ if(~isempty(Args.NumericArguments))
         fluorescence_placecells_combined = obj.data.sessData.dF_F0_corrected(place_cell_sort(:,1),trial_start_idx:trial_end_idx);
         imagesc(fluorescence_placecells_combined); title('dF\_F0'); xlabel('Time (unit)'); ylabel('Neuron (sorted)');
 
+    elseif(Args.PlaceFieldPositionEntropy)
+        
+        subplot(2,1,1)      
+        y_data = histcounts(obj.data.placefieldStats(:,2),100);
+        y_data = y_data ./ sum(y_data);
+        bar([-49:50], [y_data(51:end) y_data(1:50)]);
+                
+        subplot(2,1,2)
+        bounds = [floor(obj.data.placefieldStats(:,2) - obj.data.placefieldStats(:,3)) ceil(obj.data.placefieldStats(:,2) + obj.data.placefieldStats(:,3))];
+        combined_bins = [];
+        for i = 1:size(bounds,1)
+            combined_bins = [combined_bins bounds(i,1):bounds(i,2)];
+        end
+        combined_bins(combined_bins < 1) = combined_bins(combined_bins < 1) + 100;
+        combined_bins(combined_bins > 100) = combined_bins(combined_bins > 100) - 100;
+        
+        y_data = histcounts(combined_bins,100);
+        y_data = y_data ./ sum(y_data);
+        bar([-49:50], [y_data(51:end) y_data(1:50)]);
         
 % 	else
 % 		% code to plot yet another kind of plot

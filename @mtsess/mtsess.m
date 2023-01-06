@@ -302,6 +302,7 @@ end
 % subplot(3,1,3);
 % plot(session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), acceleration_averaged(plot_start_idx:plot_end_idx)); title('Acceleration'); xlabel('Time (s)'); ylabel('Acceleration (cm/s^2)'); xline(data_trial(1,3));
 
+velocity_raw = velocity(exclude_zero_trials_idx, :);
 velocity_averaged_ = cat(2, session_data_raw(:,1:3), velocity_averaged);
 velocity_averaged_ = velocity_averaged_(exclude_zero_trials_idx, :);
 velocity_averaged_filt = velocity_averaged_;
@@ -311,11 +312,21 @@ velocity_averaged_filt(velocity_averaged_filt(:,4) < Args.ThresVel, :) = NaN;
 
 session_data_exclude_zero_trials = cat(2, session_data_exclude_zero_trials, velocity_averaged_(:,4), velocity_averaged_filt(:,4));
 
-velocity_binned = zeros(BinSize, 1);
-for i = 1:BinSize
-    temp_arr = velocity_averaged_filt(find(velocity_averaged_filt(:,3) == i),4);
-    velocity_binned(i) = mean(temp_arr, 'omitnan'); % Positive velocity values only
+% velocity_binned = zeros(BinSize, 1);
+% for i = 1:BinSize
+%     temp_arr = velocity_averaged_filt(find(velocity_averaged_filt(:,3) == i),4);
+%     velocity_binned(i) = mean(temp_arr, 'omitnan'); % Positive velocity values only
+% end
+
+velocity_binned = zeros(nTrials, BinSize);
+for i = 1:nTrials
+    for j = 1:BinSize
+        temp_arr = velocity_averaged_filt(velocity_averaged_filt(:,2) == i & velocity_averaged_filt(:,3) == j,4);
+        velocity_binned(i,j) = mean(temp_arr,'omitnan'); % Positive velocity values only
+    end
 end
+
+%figure; imagesc(velocity_binned);
 
 % figure; plot(1:size(velocity_binned(:,1),1), velocity_binned(:,1), 'b'); title('Mean Velocity along Track Distance'); xlabel('Distance (Bin)'); ylabel('Mean Velocity (cm/s)');
 
@@ -323,6 +334,7 @@ end
 
 data.TrialTime_idx = TrialTime_idx;
 data.session_data_raw = session_data_raw;
+data.velocity_raw = velocity_raw;
 data.velocity_averaged = velocity_averaged_;
 data.velocity_averaged_filt = velocity_averaged_filt;
 data.velocity_binned = velocity_binned;

@@ -11,7 +11,7 @@ function [r,varargout] = get(obj,varargin)
 
 Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, ...
               'BinFiringRate',0, 'TrialBinFiringRate',0, 'Baseline',0, 'GMM',0, 'TrialFits',0, 'AlphaAdSm',0, ...
-              'FluorescenceTrace',0, 'TrialFluorescenceTrace',0);
+              'FluorescenceTrace',0, 'TrialFluorescenceTrace',0, 'PlaceFieldPositionEntropy',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 

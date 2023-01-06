@@ -4,8 +4,9 @@ function [obj, varargout] = plot(obj,varargin)
 %   response.
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
-		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','');
-Args.flags = {'LabelsOff','ArgsOnly'};
+		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
+          'BinFiringRate',0,'FiringMap',0);
+Args.flags = {'LabelsOff','ArgsOnly','BinFiringRate','FiringMap'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -18,18 +19,40 @@ end
 if(~isempty(Args.NumericArguments))
 	% plot one data set at a time
 	n = Args.NumericArguments{1};
-	if(Args.Type1)
-		% code to plot 1 kind of plot
-		
-		% label the axis
-		xlabel('X Axis')
-		ylabel('Y Axis')
-	elseif(Args.Type2)
-		% code to plot another kind of plot
-		
-		% label the axis
-		xlabel('X Axis')
-		ylabel('Y Axis')
+	if(Args.BinFiringRate)
+        
+        subplot(2,1,1);
+        imagesc(obj.data.binFiringRate); title('Firing Rate'); xlabel('Distance (Bin)'); ylabel('Trial');
+        
+        subplot(2,1,2);
+        plot(obj.data.maps_raw, 'g'); legends{1} = sprintf('Raw');
+        hold on
+        plot(obj.data.maps_adsm, 'b'); legends{2} = sprintf('AdSmooth');
+        plot(imgaussfilt(obj.data.maps_raw, 3),'r'); legends{3} = sprintf('Gaussian (sigma = 3)');
+        legend(legends);
+        
+	elseif(Args.FiringMap)
+
+        subplot(3,2,1);
+        imagesc(obj.data.maps_raw); title('Raw'); xlabel('Distance (Bin)');
+        colorbar;
+        subplot(3,2,3);
+        imagesc(obj.data.maps_raw1); title('Raw (1st half)'); xlabel('Distance (Bin)');
+        colorbar;
+        subplot(3,2,5);
+        imagesc(obj.data.maps_raw2); title('Raw (2nd half)'); xlabel('Distance (Bin)');
+        colorbar;
+        
+        subplot(3,2,2);
+        imagesc(obj.data.maps_adsm);  title('AdSm'); xlabel('Distance (Bin)');
+        colorbar;
+        subplot(3,2,4);
+        imagesc(obj.data.maps_adsm1); title('AdSm (1st half)'); xlabel('Distance (Bin)');
+        colorbar;
+        subplot(3,2,6);
+        imagesc(obj.data.maps_adsm2); title('AdSm (2nd half)'); xlabel('Distance (Bin)');
+        colorbar;
+        
 	else
 		% code to plot yet another kind of plot
 		

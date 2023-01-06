@@ -1,17 +1,17 @@
 function [obj, varargout] = mtgroup(varargin)
-%@mtgroup Constructor function for mtgroup class
-%   OBJ = mtgroup(varargin)
+%@mtgroup Constructor function for mttraining class
+%   OBJ = mttraining(varargin)
 %
-%   OBJ = mtgroup('auto') attempts to create a mtgroup object by ...
+%   OBJ = mttraining('auto') attempts to create a mttraining object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on mtgroup %
+%   % Instructions on mttraining %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %
-%example [as, Args] = mtgroup('save','redo')
+%example [as, Args] = mttraining('save','redo')
 %
-%dependencies: 
+%dependencies:
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Mice','RequiredFile','', 'NumericArguments', [], ...
@@ -30,9 +30,9 @@ Args.DataCheckArgs = {'BinSize', 'ThresVel'};
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'mtgroup';
+Args.classname = 'mttraining';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'mtgroup';
+Args.matvarname = 'mttraining';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -62,7 +62,6 @@ if(true) % ~isempty(dir(Args.RequiredFile))
 
     ori = pwd;
     data.origin = {pwd};
-    foldername = pwd;
     
     files = dir;
     % Get a logical vector that tells which is a directory.
@@ -70,26 +69,44 @@ if(true) % ~isempty(dir(Args.RequiredFile))
     % Extract only those that are directories.
     subFolders = files(dirFlags);
     
+    nMice = 0;
     for i = 1:size(subFolders,1)
         if  subFolders(i).name(1) == 'I' && subFolders(i).name(2) == 'D'
             cd(subFolders(i).name);
             disp(subFolders(i).name)
             
-            if isfile('mtmice.mat')
-                temp = mtmice('auto','redo','save').data;
-                data.miceData.(subFolders(i).name) = temp.neuralCombined;
-                
-                fns = fieldnames(temp.sessionCombined);
-                for j = 1:length(fns)
-                    field = ["F", "Fc", "spikes_corrected", "dF_F0_corrected", "session_data_raw", "acceleration_averaged", "session_data_exclude_zero_trials"];
-                    temp.sessionCombined.(fns{j}) = rmfield(temp.sessionCombined.(fns{j}), field);
+            mice_no = str2num(subFolders(i).name(3:4));
+            
+            if isfile('Stats/training_stats.mat')
+            
+                if ismember(mice_no,[45 49 50 59 60 61])
+                    group_id = 'Y_Ctrl';
+                    
+                elseif ismember(mice_no,[33 40 41 47 48 58 81 83 84 85])
+                    group_id = 'Y_APP';
+                    
+                elseif ismember(mice_no,[38 39 55 56 64 65 68 69 73 74 77])
+                    group_id = 'O_Ctrl';
+                    
+                elseif ismember(mice_no,[35 37 53 54 62 63 67 70 72 80])
+                    group_id = 'O_APP';
                 end
-                data.miceData_sessionData.(subFolders(i).name) = temp.sessionCombined;
-            end
                 
+                try
+                    data.sessionCombined.(group_id).(subFolders(i).name(1:4)) = load('Stats/training_stats.mat').training_stats;
+                catch
+                    miceData = mtmice('auto','Training');
+                    data.sessionCombined.(group_id).(subFolders(i).name(1:4)) = load('Stats/training_stats.mat').training_stats;
+                end
+                nMice = nMice + 1;
+                
+            end
+                                
             cd(ori)
         end
     end
+    
+    data.nMice = nMice;
 
     % create nptdata so we can inherit from it
     data.numSets = 0;

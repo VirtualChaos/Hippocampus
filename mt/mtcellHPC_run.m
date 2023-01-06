@@ -15,7 +15,10 @@ parfor cell_idx = 1:length(cells_list)
     cd(strcat(ori, '/', cell_no));
     
     try
+        cellData = mtcell('auto');
+        if cellData.data.Alpha ~= 50
         mtcell('Auto', 'Save', 'Redo');
+        end
     catch
     end
     
