@@ -1,0 +1,13 @@
+# ninja log v5
+2	61	1676052890006434386	build/maci64/c_mexapi_version.o	2eb84782027e2899
+0	62	1676052890008039901	build/maci64/rt_nonfinite.o	8b8fc1233384a16
+0	67	1676052890013586366	build/maci64/spikeBinner_matlab_data.o	4da77ff207a95a82
+0	69	1676052890016060422	build/maci64/spikeBinner.o	e56210a30e76f376
+1	72	1676052890017617687	build/maci64/_coder_spikeBinner_matlab_info.o	f421bef45c211662
+0	73	1676052890019658931	build/maci64/spikeBinner_matlab_terminate.o	1e0a6b5a6a10a4d6
+0	73	1676052890019196309	build/maci64/spikeBinner_matlab_initialize.o	de9c8b7c03dc5832
+1	74	1676052890020588153	build/maci64/spikeBinner_matlab.o	d7323e43658c24a3
+1	75	1676052890022643255	build/maci64/_coder_spikeBinner_matlab_mex.o	19c254ec8e1db02
+1	80	1676052890027424263	build/maci64/spikeBinner_matlab_emxutil.o	c359fa9f1826bc79
+1	92	1676052890039125473	build/maci64/_coder_spikeBinner_matlab_api.o	80d985d16cfb3248
+92	134	1676052890081693534	spikeBinner_matlab_mex.mexmaci64	b3c456cae89673cb

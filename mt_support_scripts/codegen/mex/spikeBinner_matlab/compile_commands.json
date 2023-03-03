@@ -1,0 +1,68 @@
+[
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  /Users/royston/Documents/Optical_Imaging_Project/spikeBinner.c -o build/maci64/spikeBinner.o",
+    "file": "/Users/royston/Documents/Optical_Imaging_Project/spikeBinner.c",
+    "output": "build/maci64/spikeBinner.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  spikeBinner_matlab_data.c -o build/maci64/spikeBinner_matlab_data.o",
+    "file": "spikeBinner_matlab_data.c",
+    "output": "build/maci64/spikeBinner_matlab_data.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  rt_nonfinite.c -o build/maci64/rt_nonfinite.o",
+    "file": "rt_nonfinite.c",
+    "output": "build/maci64/rt_nonfinite.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  spikeBinner_matlab_initialize.c -o build/maci64/spikeBinner_matlab_initialize.o",
+    "file": "spikeBinner_matlab_initialize.c",
+    "output": "build/maci64/spikeBinner_matlab_initialize.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  spikeBinner_matlab_terminate.c -o build/maci64/spikeBinner_matlab_terminate.o",
+    "file": "spikeBinner_matlab_terminate.c",
+    "output": "build/maci64/spikeBinner_matlab_terminate.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  interface/_coder_spikeBinner_matlab_api.c -o build/maci64/_coder_spikeBinner_matlab_api.o",
+    "file": "interface/_coder_spikeBinner_matlab_api.c",
+    "output": "build/maci64/_coder_spikeBinner_matlab_api.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  interface/_coder_spikeBinner_matlab_mex.c -o build/maci64/_coder_spikeBinner_matlab_mex.o",
+    "file": "interface/_coder_spikeBinner_matlab_mex.c",
+    "output": "build/maci64/_coder_spikeBinner_matlab_mex.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  spikeBinner_matlab.c -o build/maci64/spikeBinner_matlab.o",
+    "file": "spikeBinner_matlab.c",
+    "output": "build/maci64/spikeBinner_matlab.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  spikeBinner_matlab_emxutil.c -o build/maci64/spikeBinner_matlab_emxutil.o",
+    "file": "spikeBinner_matlab_emxutil.c",
+    "output": "build/maci64/spikeBinner_matlab_emxutil.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  interface/_coder_spikeBinner_matlab_info.c -o build/maci64/_coder_spikeBinner_matlab_info.o",
+    "file": "interface/_coder_spikeBinner_matlab_info.c",
+    "output": "build/maci64/_coder_spikeBinner_matlab_info.o"
+  },
+  {
+    "directory": "/Users/royston/Documents/Optical_Imaging_Project/codegen/mex/spikeBinner_matlab",
+    "command": "/usr/bin/xcrun -sdk macosx10.15 clang -fno-common -arch x86_64 -mmacosx-version-min=10.14 -fexceptions -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -DMATLAB_MEX_FILE -O2 -fwrapv -DNDEBUG -std=c99 -I \".\" -I \"/Users/royston/Documents/Optical_Imaging_Project\" -I \"./interface\" -I \"/Users/royston/Applications/MATLAB_R2021a.app/extern/include\" -I \".\" -DMODEL=spikeBinner_matlab_mex -c  /Users/royston/Applications/MATLAB_R2021a.app/extern/version/c_mexapi_version.c -o build/maci64/c_mexapi_version.o",
+    "file": "/Users/royston/Applications/MATLAB_R2021a.app/extern/version/c_mexapi_version.c",
+    "output": "build/maci64/c_mexapi_version.o"
+  }
+]

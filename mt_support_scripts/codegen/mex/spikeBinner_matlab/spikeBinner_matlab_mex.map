@@ -1,0 +1,10 @@
+_mexFunction
+_mexfilerequiredapiversion
+_emlrtMexFcnProperties
+_spikeBinner_matlab
+_spikeBinner_matlab_initialize
+_spikeBinner_matlab_terminate
+_spikeBinner_matlab_atexit
+_emxFree_real_T
+_emxInit_real_T
+_emxEnsureCapacity_real_T
