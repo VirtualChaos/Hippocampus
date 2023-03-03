@@ -146,11 +146,11 @@ if(~isempty(dir(Args.RequiredFile)))
             binArr = zeros(sessionData.nTrials * Args.BinSize, NumShuffles+1);
             
             % C++ code for spike binning
-            %A = coder.typeof(0, [inf,2], [1 0])
-            %B = coder.typeof(0, [inf,4], [1 0])
-            %C = coder.typeof(0, [inf,1], [1 0])
-            %D = coder.typeof(0, [100,10001], [0 1])
-            %E = coder.typeof(0, [inf,10001], [1 1])
+%             A = coder.typeof(0, [inf,2], [1 0]);
+%             B = coder.typeof(0, [inf,4], [1 0]);
+%             C = coder.typeof(0, [inf,1], [1 0]);
+%             D = coder.typeof(0, [100,10001], [0 1]);
+%             E = coder.typeof(0, [inf,10001], [1 1]);
             %codegen spikeBinner_matlab -args {A, B, C, 1, D, E} spikeBinner.c spikeBinner.h -report
             
             [consol_arr, binArr] = spikeBinner_matlab_mex(flat_spiketimes, stc, double(conditions), repeat, consol_arr, binArr);
