@@ -70,6 +70,7 @@ if(true) % ~isempty(dir(Args.RequiredFile))
     subFolders = files(dirFlags);
     
     nMice = 0;
+    sessionDate = [];
     for i = 1:size(subFolders,1)
         if  subFolders(i).name(1) == 'I' && subFolders(i).name(2) == 'D'
             cd(subFolders(i).name);
@@ -79,10 +80,10 @@ if(true) % ~isempty(dir(Args.RequiredFile))
             
             if isfile('Stats/training_stats.mat')
             
-                if ismember(mice_no,[45 49 50 59 60 61])
+                if ismember(mice_no,[45 49 50 59 60 61 81])
                     group_id = 'Y_Ctrl';
                     
-                elseif ismember(mice_no,[33 40 41 47 48 58 81 83 84 85])
+                elseif ismember(mice_no,[33 40 41 47 48 58 83 84 85])
                     group_id = 'Y_APP';
                     
                 elseif ismember(mice_no,[38 39 55 56 64 65 68 69 73 74 77])
@@ -90,6 +91,11 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                     
                 elseif ismember(mice_no,[35 37 53 54 62 63 67 70 72 80])
                     group_id = 'O_APP';
+                end
+                
+                if ismember(mice_no,[45 49 50 59 60 61 81]) % Male
+                    
+                else % Female
                 end
                 
                 try
@@ -100,6 +106,23 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                 end
                 nMice = nMice + 1;
                 
+                ori2 = pwd;               
+                files2 = dir;
+                % Get a logical vector that tells which is a directory.
+                dirFlags2 = [files2.isdir];
+                % Extract only those that are directories.
+                subFolders2 = files2(dirFlags2);
+                
+                for j = 1:size(subFolders2,1)
+                    if  subFolders2(j).name(1) == 'I' && subFolders2(j).name(2) == 'D'
+                        if group_id == "Y_APP" | group_id == "O_APP"
+                            date = convertCharsToStrings(subFolders2(j).name(15:22));
+                        else
+                            date = convertCharsToStrings(subFolders2(j).name(12:19));
+                        end
+                        sessionDate = [sessionDate; [str2num(subFolders2(j).name(3:4)) str2num(date)]];
+                    end
+                end
             end
                                 
             cd(ori)
@@ -107,6 +130,7 @@ if(true) % ~isempty(dir(Args.RequiredFile))
     end
     
     data.nMice = nMice;
+    data.sessionDate = sessionDate;
 
     % create nptdata so we can inherit from it
     data.numSets = 0;

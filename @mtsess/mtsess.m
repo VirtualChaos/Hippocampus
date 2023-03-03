@@ -294,6 +294,7 @@ for i = 1+padSize:size(velocity, 1)+padSize
     velocity_averaged(i - padSize) = mean(velocity_padded((i - padSize):(i + padSize)));
     acceleration_averaged(i - padSize) = mean(acceleration_padded((i - padSize):(i + padSize)));
 end
+
 % figure;
 % subplot(2,1,1);
 % plot(session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*220); title('Distance'); xlabel('Time (s)'); ylabel('Distance (cm)'); xline(data_trial(1,3));
@@ -499,29 +500,43 @@ d.data = data;
 obj = class(d,Args.classname,n);
 saveObject(obj,'ArgsC',Args);
 
-if Args.Spikes & ~isfolder('cells')
+if Args.Spikes% & ~isfolder('cells')
     % Make cell directories and save spiketimes
-    mkdir cells
-    cd cells
+    %mkdir cells
+    %cd cells
     
-    ori2 = pwd;
+%     ori2 = pwd;
+%     
+%     for i = 1:nNeuron
+%         cell_folderName = strcat('cell', num2str(sprintf('%04d',i)));
+%         mkdir(cell_folderName);
+%         cd(cell_folderName);
+%         spiketrain = spikes_corrected(i,:);
+%         save('spiketrain.mat', 'spiketrain', '-v7.3');
+%         
+%         timestamp_dsp = zeros(size(tsFindex));
+%         for ii = 1:size(tsFindex,1)
+%             timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+%         end
+%         spiketimes = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
+%         save('spiketimes.mat', 'spiketimes', '-v7.3');
+%         
+%         cd(ori2)
+%     end
     
+    spiketrain = spikes_corrected;
     for i = 1:nNeuron
-        cell_folderName = strcat('cell', num2str(sprintf('%04d',i)));
-        mkdir(cell_folderName);
-        cd(cell_folderName);
         spiketrain = spikes_corrected(i,:);
-        save('spiketrain.mat', 'spiketrain', '-v7.3');
-        
         timestamp_dsp = zeros(size(tsFindex));
         for ii = 1:size(tsFindex,1)
             timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
         end
-        spiketimes = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
-        save('spiketimes.mat', 'spiketimes', '-v7.3');
-        
-        cd(ori2)
+        spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
     end
+    
+    save('spiketrain.mat', 'spiketrain', '-v7.3');
+    save('spiketimes.mat', 'spiketimes', '-v7.3');
+    
 end
 
 cd(ori)

@@ -1,0 +1,6 @@
+function [consol_arr, binArr] = spikeBinner_matlab(flat_spiketimes, stc, conditions, repeat, consol_arr, binArr)
+    %coder.cinclude('spikeBinner.h');
+    coder.ceval('spikeBinner', coder.rref(flat_spiketimes), coder.rref(stc), coder.rref(conditions), ...
+        int32(repeat), coder.wref(consol_arr), coder.wref(binArr), ... 
+        int32(size(flat_spiketimes,1)), int32(size(stc,1)), int32(size(binArr,1)));
+end

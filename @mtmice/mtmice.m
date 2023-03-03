@@ -15,7 +15,7 @@ function [obj, varargout] = mtmice(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Mice','RequiredFile','', 'NumericArguments', [], ...
-				'BinSize',100, 'ThresVel',0, 'Training',0, 'Match',0, 'Slice',[0,0]);
+				'BinSize',100, 'ThresVel',0, 'Training',0, 'RedoSess',0, 'RedoNeural',0, 'Match',0, 'Slice',[0,0]);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
@@ -124,22 +124,23 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                 session_no = session_no + 1;
                 fprintf("Session %d: %s\n", session_no, current_folder);
                 if Args.Training
-                    if ~isfile('mtsess.mat') || (Args.RedoLevels)
+                    if ~isfile('mtsess.mat')
                         sessionData = mtsess('auto','redo','save','Spikes',0).data;
                     else
-                        try
-                            sessionData = mtsess('auto','Spikes',0).data;
-                        catch
+                        if Args.RedoSess
                             sessionData = mtsess('auto','redo','save','Spikes',0).data;
+                        else
+                            sessionData = mtsess('auto','Spikes',0).data;
                         end
                     end
                 else
-                    if ~isfile('mtsess.mat')% || (Args.RedoLevels)
+                    if Args.RedoSess
                         sessionData = mtsess('auto','redo','save').data;
                     else
-                        sessionData = mtsess('auto').data;
+                        sessionData = mtsess('auto','save').data;
                     end
                 end
+            
                 
                 if Args.Training
                     temp_numbers = regexp(current_folder,'[0-9]','match');
@@ -152,8 +153,15 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                 if ~Args.Training
                     
                     cd cells
-                    %neuralData = mtneuraldata('auto','redo','save').data;
-                    neuralData = mtneuraldata('auto').data;
+                    if Args.RedoNeural
+                        neuralData = mtneuraldata('auto','redo','save').data;
+                    else
+                        if isfile('mtneuraldata.mat')
+                            neuralData = mtneuraldata('auto').data;
+                        else
+                            neuralData = mtneuraldata('auto','save').data;
+                        end
+                    end                    
                     neuralData.date = current_folder;
                     neuralCombined.("s" + session_no) = neuralData;
                     cd ..

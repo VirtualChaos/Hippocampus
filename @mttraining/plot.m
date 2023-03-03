@@ -309,68 +309,84 @@ if(~isempty(Args.NumericArguments))
         end
         
         trained_sess_idx = find(decision_state(:,2) > 0.95,1,'first');
-        y_data_combined = mean(miceData.y_data_combined(trained_sess_idx:end,:),'omitnan');
+        if isempty(trained_sess_idx) % VelStateEstimate could not identify the post-trained point
+            trained_sess_idx = ceil(0.80 * length(fieldnames(miceData.data_trial))); % Assume mice was trained in the last 20% of recorded sessions
+        end
+        %y_data_combined = mean(miceData.y_data_combined(trained_sess_idx:end,:),'omitnan');
+        y_data_combined = mean(miceData.lick_prc(trained_sess_idx:end,:),'omitnan') ./ 100;
         nTrials = sum(miceData.nTrials(trained_sess_idx:end),'omitnan');
     
         adjusted_y_data_combined = [y_data_combined(51:end) y_data_combined(1:50)];
+                       
+        %bar([-49:50],adjusted_y_data_combined);
+        x_space = linspace(0.05,5,100);
+        %x_space = linspace(0.02,2,100);
         
-        %yyaxis left
-%         baseline = median(adjusted_y_data_combined);
-%         adjusted_y_data_combined = adjusted_y_data_combined - 0.02;
-%         adjusted_y_data_combined(adjusted_y_data_combined < 0) = 0;
-        
-        bar([-49:50],adjusted_y_data_combined);
+        y_data_combined_baseline_corr = y_data_combined;
+%         baseline = 0;
+        baseline = prctile(y_data_combined,50);
+%         y_data_combined_baseline_corr = y_data_combined - baseline;
+%         y_data_combined_baseline_corr(y_data_combined_baseline_corr < 0) = 0;
+               
+        subplot(1,2,1)
+        x_space = linspace(1,100,100);
+        %bar(x_space,y_data_combined_baseline_corr);
+        bar(x_space,y_data_combined);
         title(fns{mice_id(n,2)});
-        hold all
+        hold on
         trial_no = sum(nTrials,'omitnan');
+        xlim([0 max(x_space)]); ylim([0 1.3*max(y_data_combined_baseline_corr)]);
         
-%         fun = @(b,xdata) (b(1) ./ (xdata - b(2))) + b(3);
-%         b0 = [1,0,0];
-%         x_pred = lsqcurvefit(fun,b0,[-49:50],adjusted_y_data_combined)
-         
-        %yyaxis right
-        %ft = fittype('piecewiseLine(x,a,b,0)');
-        %f = fit([-49:50]',adjusted_y_data_combined',ft,'StartPoint',[1,1],'Lower',[1,1],'Upper',[Inf,Inf])
+%         b0 = [5,0.8];
+%         lb = [0,0.8];
+%         ub = [10,0.8];
         
-        f = fit([-49:50]',adjusted_y_data_combined','rat12')
-        plot(f);
-%         cutoff = floor(f.a);
-%         values = [[-49:50]' adjusted_y_data_combined']
-%         values(values(:,1) < cutoff,2) = 0;
-%         bar(values(:,1),values(:,2));
-%         f2 = fitdist(values(:,2),'Gamma')
-%         y_values = pdf(f,[-49:50]');
-%         plot([-49:50],y_values,'r-','LineWidth',2);
-        delete(findobj('type','legend'))
+        b0 = [5,2];
+        lb = [0,0];
+        ub = [10,5];
         
-%         mu = f.a * f.b;
-%         sigma = f.a * (f.b)^2;
-%         xline(mu,'r--');
-%         left = mu;
-%         right = mu + sqrt(sigma);
-%         ax = gca;
-%         x = [left right right left];
-%         y = [ax.YLim(1) ax.YLim(1) ax.YLim(2) ax.YLim(2)];
-%         patch(x, y, 'w', 'FaceAlpha', '0.6', 'LineStyle', 'none');
-text(5, 1.1*max(adjusted_y_data_combined), {"Trials: " + trial_no, "p: " + f.p1 + ", q: " + f.q1},'FontSize',12);
-%text(5, 1.1*max(adjusted_y_data_combined), {"Trials: " + trial_no, "Mean: " + mu + ", StDev: " + sqrt(sigma)},'FontSize',12);
+        fun = @(k,theta,x) ((1 / gamma(k) .* (theta^k)) .* (x.^(k-1)) .* exp(-(x./theta)));
+        [fitobject,gof] = fit(x_space', y_data_combined_baseline_corr', fun, ...
+                          'StartPoint', b0, ...
+                          'Lower', lb, ...
+                          'Upper', ub, ...
+                          'Robust','LAR');
+        
+        plot(x_space,gampdf(x_space,fitobject.k,fitobject.theta)+baseline);
+        text(0.2*max(x_space), 1.1*max(y_data_combined), {"Trials: " + trial_no, "k: " + fitobject.k + ", theta: " + fitobject.theta, "rmse: " + gof.rmse},'FontSize',12);
         xlabel('Position (Bins)'); ylabel('Density');
-        xlim([-49 50]); ylim([-Inf 1.3*max(adjusted_y_data_combined)]);
-        hold off
+        xlim([0 max(x_space)]); ylim([0 1.3*max(y_data_combined)]);
         
-        %Test
-%         pd1 = makedist('hn','mu',1,'sigma',15);
-%         x = 0:50;
-%         pdf1 = pdf(pd1,x);
-%         figure;
-%         yyaxis left
-%         bar(x,pdf1,'LineWidth',2); xlim([-49 50]);
-%         hold on
-%         yyaxis right
-%         ft = fittype('piecewiseLine(x,mu,sigma,k)');
-%         f = fit(x',pdf1',ft,'StartPoint',[0,1,0],'Lower',[0,0.1,0.1],'Upper',[Inf,Inf,Inf])
-%         plot(f);
-%         delete(findobj('type','legend'))
+        y_data_combined_baseline_corr = adjusted_y_data_combined;
+%         y_data_combined_baseline_corr = adjusted_y_data_combined - baseline;
+%         y_data_combined_baseline_corr(y_data_combined_baseline_corr < 0) = 0;
+        
+        subplot(1,2,2)
+        x_space = linspace(1,100,100);
+        %bar(x_space,y_data_combined_baseline_corr);
+        bar(x_space,adjusted_y_data_combined);
+        title(fns{mice_id(n,2)});
+        hold on
+        trial_no = sum(nTrials,'omitnan');
+        xlim([0 max(x_space)]); ylim([0 1.3*max(y_data_combined_baseline_corr)]);
+        
+        b0 = [0,50,10];
+        lb = [0,30,0];
+        ub = [20,70,50];
+
+        [fitobject,gof] = fit(x_space', y_data_combined_baseline_corr', 'gauss1', ...
+                          'StartPoint', b0, ...
+                          'Lower', lb, ...
+                          'Upper', ub, ...
+                          'Robust','off');
+        
+        y_pred = fitobject.a1*exp(-((x_space-fitobject.b1)/fitobject.c1).^2);
+        plot(x_space,y_pred+baseline);
+        text(0.2*max(x_space), 1.1*max(y_data_combined), {"Trials: " + trial_no, "Mean: " + fitobject.b1 + ", StDev: " + fitobject.c1, "rmse: " + gof.rmse},'FontSize',12);
+        xlabel('Position (Bins)'); ylabel('Density');
+        xlim([0 max(x_space)]); ylim([0 1.3*max(y_data_combined)]);
+
+
         
     elseif(Args.VelLickPrc)
         fns = fieldnames(obj.data.sessionCombined);

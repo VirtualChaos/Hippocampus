@@ -1,15 +1,15 @@
-function [obj, varargout] = mtneuraldata(varargin)
-%@mtneuraldata Constructor function for mtneuraldata class
-%   OBJ = mtneuraldata(varargin)
+function [obj, varargout] = mtneural(varargin)
+%@mtneural Constructor function for mtneural class
+%   OBJ = mtneural(varargin)
 %
-%   OBJ = mtneuraldata('auto') attempts to create a mtneuraldata object by ...
+%   OBJ = mtneural('auto') attempts to create a mtneural object by ...
 %   
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%   % Instructions on mtneuraldata %
+%   % Instructions on mtneural %
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %
-%example [as, Args] = mtneuraldata('save','redo')
+%example [as, Args] = mtneural('save','redo')
 %
 %dependencies: 
 
@@ -30,9 +30,9 @@ Args.DataCheckArgs = {'BinSize', 'ThresVel', 'FiltFrac', 'PeakThreshold', 'Trial
 
 % variable specific to this class. Store in Args so they can be easily
 % passed to createObject and createEmptyObject
-Args.classname = 'mtneuraldata';
+Args.classname = 'mtneural';
 Args.matname = [Args.classname '.mat'];
-Args.matvarname = 'mtneuraldata';
+Args.matvarname = 'mtneural';
 
 % To decide the method to create or load the object
 [command,robj] = checkObjCreate('ArgsC',Args,'narginC',nargin,'firstVarargin',varargin);
@@ -64,28 +64,38 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
     foldername = pwd;
     
-    cd ..
     sessionData = mtsess('Auto', varargin{:});
     sessionData = sessionData.data;
-    cd(ori);
+    cellcombinedData = mtsess('Auto', varargin{:});
+    cellcombinedData = cellcombinedData.data;
+    
     
     cells_list = string(importdata(Args.RequiredFile));
     
-    isplacecell = zeros(length(cells_list),5);
-    shuffled_sic_values = zeros(length(cells_list), 10000);
-    spiketrain_combined = zeros(length(cells_list), size(sessionData.F,2));
+    isplacecell = zeros(sessionData.nTrials,5);
+    shuffled_sic_values = zeros(sessionData.nTrials, 10000);
+    spiketrain_combined = zeros(sessionData.nTrials, size(sessionData.F,2));
     mtplacefield_failed = [];
-    binFiringRate_combined = zeros(length(cells_list), sessionData.nTrials, sessionData.Args.BinSize);
+    binFiringRate_combined = zeros(sessionData.nTrials, sessionData.nTrials, sessionData.Args.BinSize);
     
+    % Place field identification
+    for cell_idx = 1:sessionData.nTrials
+        if mod(cell_idx,50) == 0
+            fprintf("Current Cell: %d / %d; Estimated Time Remaining: %.2f seconds\n", cell_idx, sessionData.nTrials, (toc/cell_idx) * sessionData.nTrials - toc);
+        end
+        
+        
+        
+    end
+    
+    % Organising data to store
     tic
-    for cell_idx = 1:length(cells_list)
+    for cell_idx = 1:sessionData.nTrials
         
         cell_no = cells_list(cell_idx);
         cd(strcat(ori, '/', cell_no));
         
-        if mod(cell_idx,50) == 0
-            fprintf("Current Cell: %d / %d; Estimated Time Remaining: %.2f seconds\n", cell_idx, length(cells_list), (toc/cell_idx) * length(cells_list) - toc);
-        end
+
         
         try
             cellData = load('mtcell.mat');
@@ -534,9 +544,9 @@ pos_trial_bin_dsp_used    =  pos_trial_bin_dsp_firemap(ok);
 spd_dsp_used              =  spd_dsp_firemap(ok);
 
 [nNeuron,~]               =  size(spikes_used);
-nTrial                    =  sessionData.nTrials;
+nTrial                    =  max(trialNo_dsp_used);
 Neuron_list               =  1:nNeuron;
-nBin                      =  Args.BinSize;
+nBin                      =  max(pos_trial_bin_dsp_used);
 
 %% Prior information
 % Prior: P_pos
@@ -576,7 +586,7 @@ for i_Trial = 1:nTrial
             ts_decoded     =  cat(1, ts_decoded, mean(tsF_trial(st:ed)));
             nowF           =  mean(spks_trial(:, st:ed),2)';
             nowF_mat       =  repmat(nowF, nBin, 1);
-                        
+            
             % Key formula of Bayesian decoding: P(pos|nowf) -> Pspatial * (meanF(pos))^nowf * exp(-tau*f(pos))
             P_pos_spks     =   sum(log((meanF_bin_odd+eps).^nowF_mat),2)- tau * sum(meanF_bin_odd, 2);
             %figure(1);plot(P_pos_spks)
