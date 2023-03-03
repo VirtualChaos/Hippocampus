@@ -526,12 +526,12 @@ if Args.Spikes% & ~isfolder('cells')
     
     spiketrain = spikes_corrected;
     for i = 1:nNeuron
-        spiketrain = spikes_corrected(i,:);
+        spiketrain_cell = spikes_corrected(i,:);
         timestamp_dsp = zeros(size(tsFindex));
         for ii = 1:size(tsFindex,1)
             timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
         end
-        spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain)); % Get timestamp of spikes idx
+        spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain_cell)); % Get timestamp of spikes idx
     end
     
     save('spiketrain.mat', 'spiketrain', '-v7.3');
