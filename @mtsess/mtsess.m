@@ -110,8 +110,8 @@ if Args.Spikes
     [nNeuron, nImg]       =  size(F0);
     spikes0_corrected = load(fullfile(foldername,'spikes0_corrected.mat'));
     spikes0_corrected = spikes0_corrected.spikes0_corrected;
-    dF_F0_corrected_ = load(fullfile(foldername,'dF_F0_corrected.mat'));
-    dF_F0_corrected_ = dF_F0_corrected_.dF_F0_corrected;
+    dF_F0_corrected_ = load(fullfile(foldername,'dFF0_corrected.mat'));
+    dF_F0_corrected_ = dF_F0_corrected_.dFF0_corrected;
     
     ResStr1               =  circshift(ResStr,-1);
     ResEnd1               =  circshift(ResEnd,-1);
@@ -419,7 +419,7 @@ else
    lick_freq_idx = [lick_freq_idx find(diff(session_data_exclude_zero_trials(:,6)) == -1)];
 end
 lick_freq_idx = [lick_freq_idx (session_data_exclude_zero_trials(lick_freq_idx(:,2),1) - session_data_exclude_zero_trials(lick_freq_idx(:,1),1))];
-lick_freq_idx = [lick_freq_idx 1./lick_freq_idx(:,3)];
+lick_freq_idx = [lick_freq_idx 1./lick_freq_idx(:,3) session_data_exclude_zero_trials(lick_freq_idx(:,2),2:4)];
 
 lick_freq = zeros(size(session_data_exclude_zero_trials(:,6),1),1); % Resetting array to 0
 for i = 1:size(lick_freq_idx,1)

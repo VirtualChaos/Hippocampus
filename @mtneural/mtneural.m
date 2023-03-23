@@ -14,7 +14,7 @@ function [obj, varargout] = mtneural(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','cells_list.txt', 'NumericArguments', [], ...
+				'ObjectLevel','Session','RequiredFile','mtcellcombined.mat', 'NumericArguments', [], ...
 				'BinSize',100, 'ThresVel',1, 'FiltFrac',0.6, 'PeakThreshold',3, 'TrialPeakThreshold',1, 'TrialPeakCheckFrac',2/3);
             
 Args.flags = {'Auto','ArgsOnly'};
@@ -66,11 +66,8 @@ if(~isempty(dir(Args.RequiredFile)))
     
     sessionData = mtsess('Auto', varargin{:});
     sessionData = sessionData.data;
-    cellcombinedData = mtsess('Auto', varargin{:});
+    cellcombinedData = mtcellcombined('Auto', varargin{:});
     cellcombinedData = cellcombinedData.data;
-    
-    
-    cells_list = string(importdata(Args.RequiredFile));
     
     isplacecell = zeros(sessionData.nTrials,5);
     shuffled_sic_values = zeros(sessionData.nTrials, 10000);
@@ -79,102 +76,59 @@ if(~isempty(dir(Args.RequiredFile)))
     binFiringRate_combined = zeros(sessionData.nTrials, sessionData.nTrials, sessionData.Args.BinSize);
     
     % Place field identification
-    for cell_idx = 1:sessionData.nTrials
-        if mod(cell_idx,50) == 0
-            fprintf("Current Cell: %d / %d; Estimated Time Remaining: %.2f seconds\n", cell_idx, sessionData.nTrials, (toc/cell_idx) * sessionData.nTrials - toc);
+    for cell_idx = 1:sessionData.nNeuron
+        if mod(cell_idx,100) == 0
+            fprintf("Current Cell: %d / %d\n", cell_idx, sessionData.nNeuron);
         end
         
+        cellData = cellcombinedData.("n" + sprintf('%04d',cell_idx));
+        placefieldData.("n" + sprintf('%04d',cell_idx)) = placefield(cellData, Args);
         
-        
-    end
-    
-    % Organising data to store
-    tic
-    for cell_idx = 1:sessionData.nTrials
-        
-        cell_no = cells_list(cell_idx);
-        cd(strcat(ori, '/', cell_no));
-        
-
-        
-        try
-            cellData = load('mtcell.mat');
-            cellData = cellData.mtcell.data;
-        catch
-            cellData = mtcell('auto','save','redo').data;
-        end
-        
-        try
-            mtplacefield('auto','save','redo', ... 
-                            'FiltFrac',Args.FiltFrac,'PeakThreshold',Args.PeakThreshold,'TrialPeakThreshold',Args.TrialPeakThreshold,'TrialPeakCheckFrac',Args.TrialPeakCheckFrac);
-        catch
-            mtplacefield_failed = cat(1,mtplacefield_failed, cell_idx);
-        end
-        
-        cell_no_ = char(cell_no);
-        cell_no_ = str2double(cell_no_(5:end));
-        isplacecell(cell_idx,1) = cell_no_;
+        isplacecell(cell_idx,1) = cell_idx;
         isplacecell(cell_idx,2) = cellData.SIC;
         isplacecell(cell_idx,3) = prctile(cellData.SICsh,95);
         isplacecell(cell_idx,4) = cellData.SIC >= prctile(cellData.SICsh,95);
         shuffled_sic_values(cell_idx,:) = cellData.SICsh;
-        
-        cellData = rmfield(cellData, {'maps_adsmsh', 'dur_adsmsh', 'radiish'});
-        data.cellData.("n" + sprintf('%04d',cell_no_)) = cellData;
-        
+                
         binFiringRate_combined(cell_idx,:,:) = cellData.binFiringRate;
         
-        try
-            placefieldData = mtplacefield('auto','save','redo', ... 
-                            'FiltFrac',Args.FiltFrac,'PeakThreshold',Args.PeakThreshold,'TrialPeakThreshold',Args.TrialPeakThreshold,'TrialPeakCheckFrac',Args.TrialPeakCheckFrac).data;
-        catch
-            mtplacefield_failed = cat(1,mtplacefield_failed, cell_idx);
-            placefieldData = {};
-        end
-        
-        spiketimes = load('spiketimes.mat');
-        spiketimes = spiketimes.spiketimes;
-        spiketrain = load('spiketrain.mat');
-        spiketrain = spiketrain.spiketrain;
-        
-        data.placefieldData.("n" + sprintf('%04d',cell_no_)) = placefieldData;
-        data.spiketimes.("n" + sprintf('%04d',cell_no_)) = spiketimes;
-%         try
-%             data.spiketimes.("n" + sprintf('%04d',cell_no_)) = spiketimes;
-%         catch
-%             data.spiketimes.("n" + sprintf('%04d',cell_no_)) = [];
-%         end
-        %data.spiketrain.("n" + sprintf('%04d',cell_no_)) = spiketrain;
-        spiketrain_combined(cell_idx,:) = spiketrain;
-               
-        cd(ori);
+        cellData = rmfield(cellData, {'maps_adsmsh', 'dur_adsmsh', 'radiish'});
+        data.cellData.("n" + sprintf('%04d',cell_idx)) = cellData;
     end
-    data.mtplacefield_failed = mtplacefield_failed;
     isplacecell(:,5) = isplacecell(:,2) > prctile(shuffled_sic_values,95,'all');
-    data.spiketrain = spiketrain_combined;
+    
+    % Organising data to store
+    spiketimes = load('spiketimes.mat');
+    spiketimes = spiketimes.spiketimes;
+    spiketrain = load('spiketrain.mat');
+    spiketrain = spiketrain.spiketrain;
+    
+    data.placefieldData = placefieldData;
+    data.spiketimes = spiketimes;
+    data.spiketrain = spiketrain;
+    
     data.binFiringRate = binFiringRate_combined;
     
     data.isplacecell = sortrows(isplacecell);
     data.shuffled_sic_values = shuffled_sic_values;
-    data.cellData = orderfields(data.cellData);
     data.placefieldData = orderfields(data.placefieldData);
     
     data.sessData.data_trial = sessionData.data_trial;
     data.sessData.tsF = sessionData.tsF;
     data.sessData.dF_F0_corrected = sessionData.dF_F0_corrected;
     
-    rmse = zeros(length(cells_list), 2);
-    nrmse_mean = zeros(length(cells_list), 2);
-    nrmse_stdev = zeros(length(cells_list), 2);
-    auc = zeros(length(cells_list), 2);
-    log_likelihood = zeros(length(cells_list), 2);
-    aic = zeros(length(cells_list), 2);
-    bic = zeros(length(cells_list), 2);
-    threshold = zeros(length(cells_list), 5);
-    placecellStats = zeros(length(cells_list), 4);
+    rmse = zeros(sessionData.nNeuron, 2);
+    nrmse_mean = zeros(sessionData.nNeuron, 2);
+    nrmse_stdev = zeros(sessionData.nNeuron, 2);
+    auc = zeros(sessionData.nNeuron, 2);
+    log_likelihood = zeros(sessionData.nNeuron, 2);
+    aic = zeros(sessionData.nNeuron, 2);
+    bic = zeros(sessionData.nNeuron, 2);
+    threshold = zeros(sessionData.nNeuron, 5);
+    placecellStats = zeros(sessionData.nNeuron, 4);
     placefieldStats = [];
     fns = fieldnames(data.placefieldData);
-    for i = 1:length(cells_list)
+    for i = 1:sessionData.nNeuron
         rmse(i,1) = i;
         nrmse_mean(i,1) = i;
         nrmse_stdev(i,1) = i;
@@ -204,9 +158,7 @@ if(~isempty(dir(Args.RequiredFile)))
             placecellStats(i,3) = mean(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Mean firing rate
             placecellStats(i,4) = std(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Stdev firing rate
             if ~isempty(data.placefieldData.(fns{i}).GMM)
-                cell_no_ = char(cells_list(i));
-                cell_no_ = str2double(cell_no_(5:end));
-                temp = repmat(cell_no_,size(data.placefieldData.(fns{i}).GMM,1),1);
+                temp = repmat(cell_idx,size(data.placefieldData.(fns{i}).GMM,1),1);
                 placefieldStats = cat(1, placefieldStats, [temp data.placefieldData.(fns{i}).GMM]);
             end
         else
@@ -388,8 +340,6 @@ if(~isempty(dir(Args.RequiredFile)))
 
 
 %% Bayesian decoding (original code)
-cd ..
-
 spdthresh = 1;
 dF_F0_corrected = load('dF_F0_corrected.mat').dF_F0_corrected;
 spikes0_corrected = load('spikes0_corrected.mat').spikes0_corrected;
@@ -628,9 +578,6 @@ pos_err = [pos_err_even_mean,pos_err_even_median,pos_err_even_mean_circ,pos_err_
 
 data.pos_err = pos_err;
 data.derror = derror;
-
-
-    cd(ori);
     
     % create nptdata so we can inherit from it
     data.numSets = 0;
