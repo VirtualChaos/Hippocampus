@@ -2,11 +2,11 @@
 
 #PBS -P matlab
 #PBS -q short
-#PBS -l select=1:ncpus=1:mem=30GB
+#PBS -l select=1:ncpus=1:mem=45GB
 #PBS -j oe 
 
 cd $PBS_O_WORKDIR;   ## This line is needed, do not modify. 
 
 #Submit in session directory
 
-matlab -batch "addpath ~/matlab/Github/Hippocampus; addpath ~/matlab/Github/Hippocampus/mt; addpath(genpath('~/matlab/Github/Hippocampus/mt_support_scripts')); addpath(genpath('~/matlab/Github/DPV')); addpath ~/matlab/Github/npy-matlab/npy-matlab; addpath ~/matlab/Github/newNPT; mtcellcombined('auto','redo','save'); exit;"
+matlab -batch "addpath ~/matlab/Github/Hippocampus; addpath ~/matlab/Github/Hippocampus/mt; addpath(genpath('~/matlab/Github/Hippocampus/mt_support_scripts')); addpath(genpath('~/matlab/Github/DPV')); addpath ~/matlab/Github/npy-matlab/npy-matlab; addpath ~/matlab/Github/newNPT; mtcellcombined('auto','redo','save'); mtneural('auto','redo','save'); exit;"
