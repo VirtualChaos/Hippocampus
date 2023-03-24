@@ -11,4 +11,3 @@ for folder = 1:size(folders,1)
 end
 
 writematrix(cells_list, 'cells_list.txt');
-

@@ -10,11 +10,11 @@ cd $PBS_O_WORKDIR;   ## This line is needed, do not modify.
 #Submit in session directory
 pushd cells
 
-cmd1="qsub ~/matlab/Github/Hippocampus/mt/mtcellcombinedHPC_submit.pbs"
+cmd1="qsub ~/matlab/Github/Hippocampus/mt/mtcellHPC_submit.pbs"
 
-while IFS= read -r cellBlock_no; do
-echo "$cellBlock_no"
-pushd $cellBlock_no
+while IFS= read -r cell_no; do
+echo "$cell_no"
+pushd $cell_no
 eval $cmd1
 popd
-done < cellBlockList.txt
+done < cells_list.txt

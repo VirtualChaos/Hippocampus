@@ -71,7 +71,6 @@ if(~isempty(dir(Args.RequiredFile)))
     
     isplacecell = zeros(sessionData.nTrials,5);
     shuffled_sic_values = zeros(sessionData.nTrials, 10000);
-    spiketrain_combined = zeros(sessionData.nTrials, size(sessionData.F,2));
     mtplacefield_failed = [];
     binFiringRate_combined = zeros(sessionData.nTrials, sessionData.nTrials, sessionData.Args.BinSize);
     

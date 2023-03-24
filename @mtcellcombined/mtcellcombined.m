@@ -71,7 +71,13 @@ if(~isempty(dir(Args.RequiredFile)))
     spiketimes_all = load(Args.RequiredFile);
     spiketimes_all = spiketimes_all.spiketimes;
     
-    for cell_idx = 1:sessionData.nNeuron
+    cellBlockFieldnames = fieldnames(spiketimes_all);
+    start_cell_name = char(cellBlockFieldnames(1));
+    start_cell_idx = str2num(start_cell_name(2:5));
+    end_cell_name = char(cellBlockFieldnames(end));
+    end_cell_idx = str2num(end_cell_name(2:5));
+    
+    for cell_idx = start_cell_idx:end_cell_idx
         
         if mod(cell_idx,50) == 0
             fprintf('Processing cell %i\n',cell_idx);
