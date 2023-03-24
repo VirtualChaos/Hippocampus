@@ -207,11 +207,11 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_save(bins) = firing_rates_full_raw(1,bins);
                 
                 if repeat == 1
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw = to_save;
                 elseif repeat == 2
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw1 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw1 = to_save;
                 elseif repeat == 3
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw2 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw2 = to_save;
                 end
                 nan_track = isnan(to_save);
                 
@@ -289,52 +289,52 @@ if(~isempty(dir(Args.RequiredFile)))
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.("n" + sprintf('%04d',cell_idx)).maps_adsm = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsm = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     to_save(:,bins) = firing_rates_full(2:end,:);
-                    data.("n" + sprintf('%04d',cell_idx)).maps_adsmsh = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsmsh = to_save;
                     to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     to_save(:,bins) = to_fill_time(2:end,:);
-                    data.("n" + sprintf('%04d',cell_idx)).dur_adsmsh = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsmsh = to_save;
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = to_fill_time(1,:);
-                    data.("n" + sprintf('%04d',cell_idx)).dur_adsm = to_save;
-                    data.("n" + sprintf('%04d',cell_idx)).radii = to_fill_radius(1,:);
-                    data.("n" + sprintf('%04d',cell_idx)).radiish = to_fill_radius(2:end,:);
-                    data.("n" + sprintf('%04d',cell_idx)).binSpikeCount = binSpikeCount;
-                    data.("n" + sprintf('%04d',cell_idx)).binDuration = binDuration;
-                    data.("n" + sprintf('%04d',cell_idx)).binFiringRate = binSpikeCount./binDuration;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsm = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).radii = to_fill_radius(1,:);
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).radiish = to_fill_radius(2:end,:);
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).binSpikeCount = binSpikeCount;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).binDuration = binDuration;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).binFiringRate = binSpikeCount./binDuration;
                     
                 elseif repeat == 2
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.("n" + sprintf('%04d',cell_idx)).maps_adsm1 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsm1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     %to_save(:,bins) = firing_rates_full(2:end,:);
-                    %data.("n" + sprintf('%04d',cell_idx)).maps_adsmsh1 = to_save;
+                    %data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsmsh1 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     %to_save(:,bins) = to_fill_time(2:end,:);
-                    %data.("n" + sprintf('%04d',cell_idx)).dur_adsmsh1 = to_save;
+                    %data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsmsh1 = to_save;
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = to_fill_time(1,:);
-                    data.("n" + sprintf('%04d',cell_idx)).dur_adsm1 = to_save;
-                    data.("n" + sprintf('%04d',cell_idx)).radii1 = to_fill_radius;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsm1 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).radii1 = to_fill_radius;
                 elseif repeat == 3
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = firing_rates_full(1,:);
                     to_save(find(nan_track==1)) = nan;
-                    data.("n" + sprintf('%04d',cell_idx)).maps_adsm2 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsm2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     %to_save(:,bins) = firing_rates_full(2:end,:);
-                    %data.("n" + sprintf('%04d',cell_idx)).maps_adsmsh2 = to_save;
+                    %data.cellData.("n" + sprintf('%04d',cell_idx)).maps_adsmsh2 = to_save;
                     %to_save = NaN(size(firing_rates_full,1)-1,Args.BinSize);
                     %to_save(:,bins) = to_fill_time(2:end,:);
-                    %data.("n" + sprintf('%04d',cell_idx)).dur_adsmsh2 = to_save;
+                    %data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsmsh2 = to_save;
                     to_save = NaN(1,Args.BinSize);
                     to_save(bins) = to_fill_time(1,:);
-                    data.("n" + sprintf('%04d',cell_idx)).dur_adsm2 = to_save;
-                    data.("n" + sprintf('%04d',cell_idx)).radii2 = to_fill_radius;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).dur_adsm2 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).radii2 = to_fill_radius;
                 end
                 
             else
@@ -344,11 +344,11 @@ if(~isempty(dir(Args.RequiredFile)))
                 to_save = NaN(1,Args.BinSize);
                 to_save(bins) = firing_rates_full(1,:);
                 if repeat == 1
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw = to_save;
                 elseif repeat == 2
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw1 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw1 = to_save;
                 elseif repeat == 3
-                    data.("n" + sprintf('%04d',cell_idx)).maps_raw2 = to_save;
+                    data.cellData.("n" + sprintf('%04d',cell_idx)).maps_raw2 = to_save;
                 end
             end
             
@@ -380,23 +380,23 @@ if(~isempty(dir(Args.RequiredFile)))
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             if repeat == 1
-                data.("n" + sprintf('%04d',cell_idx)).SIC = sic_out(1);
+                data.cellData.("n" + sprintf('%04d',cell_idx)).SIC = sic_out(1);
                 % shuffle_SIC(shuffle_no) = sic_out(1);
-                data.("n" + sprintf('%04d',cell_idx)).SICsh = sic_out(2:end,1);
-                %     data.("n" + sprintf('%04d',cell_idx)).median_occ_firings = median_stats';
-                %     data.("n" + sprintf('%04d',cell_idx)).variance_occ_firings = var_stats';
-                %     data.("n" + sprintf('%04d',cell_idx)).perc_occ_firings = perc_stats';
-                %     data.("n" + sprintf('%04d',cell_idx)).occ_data = occ_data;
+                data.cellData.("n" + sprintf('%04d',cell_idx)).SICsh = sic_out(2:end,1);
+                %     data.cellData.("n" + sprintf('%04d',cell_idx)).median_occ_firings = median_stats';
+                %     data.cellData.("n" + sprintf('%04d',cell_idx)).variance_occ_firings = var_stats';
+                %     data.cellData.("n" + sprintf('%04d',cell_idx)).perc_occ_firings = perc_stats';
+                %     data.cellData.("n" + sprintf('%04d',cell_idx)).occ_data = occ_data;
             elseif repeat == 2
-                data.("n" + sprintf('%04d',cell_idx)).SIC1 = sic_out;
+                data.cellData.("n" + sprintf('%04d',cell_idx)).SIC1 = sic_out;
             elseif repeat == 3
-                data.("n" + sprintf('%04d',cell_idx)).SIC2 = sic_out;
+                data.cellData.("n" + sprintf('%04d',cell_idx)).SIC2 = sic_out;
             end
-            %     data.("n" + sprintf('%04d',cell_idx)).median_occ_firings = median_stats';
-            %     data.("n" + sprintf('%04d',cell_idx)).variance_occ_firings = var_stats';
-            %     data.("n" + sprintf('%04d',cell_idx)).perc_occ_firings = perc_stats';
+            %     data.cellData.("n" + sprintf('%04d',cell_idx)).median_occ_firings = median_stats';
+            %     data.cellData.("n" + sprintf('%04d',cell_idx)).variance_occ_firings = var_stats';
+            %     data.cellData.("n" + sprintf('%04d',cell_idx)).perc_occ_firings = perc_stats';
             
-            %     data.("n" + sprintf('%04d',cell_idx)).occ_data = occ_data;
+            %     data.cellData.("n" + sprintf('%04d',cell_idx)).occ_data = occ_data;
         end
         
     end
