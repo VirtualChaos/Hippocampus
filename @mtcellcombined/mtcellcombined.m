@@ -66,8 +66,10 @@ if(~isempty(dir(Args.RequiredFile)))
     % Cell class
     ori = pwd;
     data.origin = {pwd};
+    cd ../..
     sessionData = mtsess('auto', varargin{:});
     sessionData = sessionData.data;
+    cd(ori);
     spiketimes_all = load(Args.RequiredFile);
     spiketimes_all = spiketimes_all.spiketimes;
     
@@ -92,6 +94,7 @@ if(~isempty(dir(Args.RequiredFile)))
         for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
             
             % selecting rows from sessionTimeC
+            disp(fieldnames(sessionData))
             stc = sessionData.session_data_exclude_zero_trials(:,[1,4,3]);
             stc(:,1) = stc(:,1);
             stc(:,4) = [diff(stc(:,1)); 0];
@@ -140,7 +143,7 @@ if(~isempty(dir(Args.RequiredFile)))
             if Args.ThresVel > 0
                 conditions = conditions & (sessionData.velocity_averaged(:,4) > Args.ThresVel);
             end
-            
+                        
             bins = 1:Args.BinSize;
             
             consol_arr = zeros(Args.BinSize, NumShuffles + 1);
