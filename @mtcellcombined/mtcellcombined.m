@@ -69,7 +69,11 @@ if(~isempty(dir(Args.RequiredFile)))
     cd ../..
     sessionData = mtsess('auto', varargin{:});
     sessionData = sessionData.data;
+    cd('cells');
+    vel_threshold_handler = string(importdata("vel_threshold_handler.txt"));
+    Args.VelThresholdHandler = vel_threshold_handler;
     cd(ori);
+    
     spiketimes_all = load(Args.RequiredFile);
     spiketimes_all = spiketimes_all.spiketimes;
     
@@ -81,7 +85,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     for cell_idx = start_cell_idx:end_cell_idx
         
-        if mod(cell_idx,10) == 0
+        if mod(cell_idx,5) == 0
             fprintf('Processing cell %i\n',cell_idx);
         end
         
@@ -91,7 +95,7 @@ if(~isempty(dir(Args.RequiredFile)))
             spiketimes = 0;
         end
         
-        for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
+        for repeat = 1:1 % 1 = full trial, 2 = 1st half, 3 = 2nd half
             
             % selecting rows from sessionTimeC
             stc = sessionData.session_data_exclude_zero_trials(:,[1,4,3]);
@@ -140,7 +144,13 @@ if(~isempty(dir(Args.RequiredFile)))
             clear full_arr temp
             
             if Args.ThresVel > 0
-                conditions = conditions & (sessionData.velocity_averaged(:,4) > Args.ThresVel);
+                if vel_threshold_handler == "rest"
+                    conditions = conditions & (sessionData.velocity_averaged(:,4) <= Args.ThresVel);
+                elseif vel_threshold_handler == "zero"
+                    conditions = conditions & (sessionData.velocity_averaged(:,4) == 0);
+                else
+                    conditions = conditions & (sessionData.velocity_averaged(:,4) > Args.ThresVel);
+                end
             end
                         
             bins = 1:Args.BinSize;
