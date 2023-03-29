@@ -505,7 +505,7 @@ if Args.Spikes% & ~isfolder('cells')
     mkdir cells
     cd cells
     
-    cell_blocks_total = ceil(nNeuron / 100);
+    cell_blocks_total = ceil(nNeuron / 50);
     ori2 = pwd;
     
     for cellBlock_no = 1:cell_blocks_total
