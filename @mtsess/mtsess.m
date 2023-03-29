@@ -512,8 +512,8 @@ if Args.Spikes% & ~isfolder('cells')
         cellBlock_folderName = strcat('cellBlock', num2str(sprintf('%02d',cellBlock_no)));
         mkdir(cellBlock_folderName);
         cd(cellBlock_folderName);
-        start_cell = (cellBlock_no-1)*100 + 1;
-        end_cell = (cellBlock_no-1)*100 + 100;
+        start_cell = (cellBlock_no-1)*50 + 1;
+        end_cell = (cellBlock_no-1)*50 + 50;
         if end_cell > nNeuron
             end_cell = nNeuron;
         end
