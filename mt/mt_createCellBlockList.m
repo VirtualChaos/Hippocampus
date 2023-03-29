@@ -12,3 +12,16 @@ end
 
 writematrix(cellBlockList, 'cellBlockList.txt');
 
+cd ..
+[~,curr_folder,~] = fileparts(pwd);
+cd(ori);
+flag = regexp(curr_folder,'rest','match');
+if string(regexp(curr_folder,'rest','match')) == "rest"
+    writematrix('rest', 'vel_threshold_handler.txt');
+elseif string(regexp(curr_folder,'zero','match')) == "zero"
+    writematrix('zero', 'vel_threshold_handler.txt');
+else
+    writematrix('normal', 'vel_threshold_handler.txt');
+end
+
+
