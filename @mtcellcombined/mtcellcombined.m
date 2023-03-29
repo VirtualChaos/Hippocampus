@@ -81,7 +81,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     for cell_idx = start_cell_idx:end_cell_idx
         
-        if mod(cell_idx,50) == 0
+        if mod(cell_idx,10) == 0
             fprintf('Processing cell %i\n',cell_idx);
         end
         
@@ -94,7 +94,6 @@ if(~isempty(dir(Args.RequiredFile)))
         for repeat = 1:3 % 1 = full trial, 2 = 1st half, 3 = 2nd half
             
             % selecting rows from sessionTimeC
-            disp(fieldnames(sessionData))
             stc = sessionData.session_data_exclude_zero_trials(:,[1,4,3]);
             stc(:,1) = stc(:,1);
             stc(:,4) = [diff(stc(:,1)); 0];
@@ -146,11 +145,6 @@ if(~isempty(dir(Args.RequiredFile)))
                         
             bins = 1:Args.BinSize;
             
-            consol_arr = zeros(Args.BinSize, NumShuffles + 1);
-            if repeat == 1
-                binArr = zeros(Args.BinSize * sessionData.nTrials, NumShuffles + 1);
-            end
-            
             consol_arr = zeros(Args.BinSize, NumShuffles+1);
             binArr = zeros(sessionData.nTrials * Args.BinSize, NumShuffles+1);
             
@@ -199,7 +193,11 @@ if(~isempty(dir(Args.RequiredFile)))
             gpdur = accumarray(stc_ss(:,2),stc_ss(:,3))';
             if repeat == 1
                 binSpikeCount = reshape(binArr(:,1), [Args.BinSize,sessionData.nTrials])';
-                binDuration = reshape(accumarray(stc_ss(:,1),stc_ss(:,3))', [Args.BinSize,sessionData.nTrials])';
+                binDuration_array = accumarray(stc_ss(:,1),stc_ss(:,3));
+                if length(binDuration_array) < (Args.BinSize*sessionData.nTrials)
+                    binDuration_array(length(binDuration_array)+1:Args.BinSize*sessionData.nTrials) = 0;
+                end
+                binDuration = reshape(binDuration_array', [Args.BinSize,sessionData.nTrials])';
             end
             clear conditions0 conditions binArr flat_spiketimes stc stc_ss
             
