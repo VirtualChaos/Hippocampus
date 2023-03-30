@@ -69,6 +69,11 @@ if(~isempty(dir(Args.RequiredFile)))
     cd ../..
     sessionData = mtsess('auto', varargin{:});
     sessionData = sessionData.data;
+    toKeep = {'session_data_exclude_zero_trials', 'sessionMidpoint', 'actual_start_time', ...
+                'velocity_averaged', 'nTrials', 'nNeuron'};
+    f = fieldnames(sessionData);
+    toRemove = f(~ismember(f,toKeep));
+    sessionData = rmfield(sessionData,[toRemove]);
     cd('cells');
     vel_threshold_handler = string(importdata("vel_threshold_handler.txt"));
     Args.VelThresholdHandler = vel_threshold_handler;
@@ -209,7 +214,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
                 binDuration = reshape(binDuration_array', [Args.BinSize,sessionData.nTrials])';
             end
-            clear conditions0 conditions binArr flat_spiketimes stc stc_ss
+            clear conditions0 conditions binArr consol_arr flat_spiketimes stc stc_ss
             
             if Args.AdaptiveSmooth
                 
