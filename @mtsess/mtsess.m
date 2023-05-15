@@ -120,8 +120,10 @@ if Args.Spikes
     e0                    =  find(ResEnd<2 & ResEnd1 >2);
     s                     =  s0(1:length(e0));
     e                     =  e0;
+    s                     =  s(1:nImg);
+    e                     =  e(1:nImg);
     Imgstate0             = zeros(length(Timestamp_res),1);
-    for i = 1:length(e0)
+    for i = 1:length(e)
         Imgstate0(s(i):e(i)) = 5;
     end
     Imgstate                         =    interp1(Timestamp_res,  Imgstate0,   Timestamp_treadmill, 'linear');
@@ -294,6 +296,7 @@ for i = 1+padSize:size(velocity, 1)+padSize
     velocity_averaged(i - padSize) = mean(velocity_padded((i - padSize):(i + padSize)));
     acceleration_averaged(i - padSize) = mean(acceleration_padded((i - padSize):(i + padSize)));
 end
+session_data_raw = cat(2,session_data_raw,velocity_averaged);
 
 % figure;
 % subplot(2,1,1);
@@ -492,6 +495,7 @@ data.lick_burst = lick_burst;
 data.lick_burst_vel_filt = lick_burst_vel_filt;
 data.lick_RZ_confidence = lick_RZ_confidence;
 
+
 % create nptdata so we can inherit from it
 data.numSets = 0;
 data.Args = Args;
@@ -505,49 +509,53 @@ if Args.Spikes% & ~isfolder('cells')
     mkdir cells
     cd cells
     
-    cell_blocks_total = ceil(nNeuron / 50);
+%     cell_blocks_total = ceil(nNeuron / 50);
     ori2 = pwd;
-    
-    for cellBlock_no = 1:cell_blocks_total
-        cellBlock_folderName = strcat('cellBlock', num2str(sprintf('%02d',cellBlock_no)));
-        mkdir(cellBlock_folderName);
-        cd(cellBlock_folderName);
-        start_cell = (cellBlock_no-1)*50 + 1;
-        end_cell = (cellBlock_no-1)*50 + 50;
-        if end_cell > nNeuron
-            end_cell = nNeuron;
-        end
-        
-        spiketrain = spikes_corrected(start_cell:end_cell,:);
-        for i = start_cell:end_cell
-            spiketrain_cell = spikes_corrected(i,:);
-            timestamp_dsp = zeros(size(tsFindex));
-            for ii = 1:size(tsFindex,1)
-                timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
-            end
-            spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain_cell)); % Get timestamp of spikes idx
-        end
-        
-        save('spiketrain.mat', 'spiketrain', '-v7.3');
-        save('spiketimes.mat', 'spiketimes', '-v7.3');
-        
-        clear spiketrain spiketimes
-        
-        cd(ori2)
-    end
-    
-%     spiketrain = spikes_corrected;
-%     for i = 1:nNeuron
-%         spiketrain_cell = spikes_corrected(i,:);
-%         timestamp_dsp = zeros(size(tsFindex));
-%         for ii = 1:size(tsFindex,1)
-%             timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+%     
+%     for cellBlock_no = 1:cell_blocks_total
+%         cellBlock_folderName = strcat('cellBlock', num2str(sprintf('%02d',cellBlock_no)));
+%         mkdir(cellBlock_folderName);
+%         cd(cellBlock_folderName);
+%         start_cell = (cellBlock_no-1)*50 + 1;
+%         end_cell = (cellBlock_no-1)*50 + 50;
+%         if end_cell > nNeuron
+%             end_cell = nNeuron;
 %         end
-%         spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain_cell)); % Get timestamp of spikes idx
+%         
+%         spiketrain = spikes_corrected(start_cell:end_cell,:);
+%         for i = start_cell:end_cell
+%             spiketrain_cell = spikes_corrected(i,:);
+%             timestamp_dsp = zeros(size(tsFindex));
+%             for ii = 1:size(tsFindex,1)
+%                 timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+%             end
+%             spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain_cell)); % Get timestamp of spikes idx
+%         end
+%         
+%         save('spiketrain.mat', 'spiketrain', '-v7.3');
+%         save('spiketimes.mat', 'spiketimes', '-v7.3');
+%         
+%         clear spiketrain spiketimes
+%         
+%         cd(ori2)
 %     end
 %     
-%     save('spiketrain.mat', 'spiketrain', '-v7.3');
-%     save('spiketimes.mat', 'spiketimes', '-v7.3');
+    mt_createCellBlockList;
+
+    cd(ori)
+    
+    spiketrain = spikes_corrected;
+    for i = 1:nNeuron
+        spiketrain_cell = spikes_corrected(i,:);
+        timestamp_dsp = zeros(size(tsFindex));
+        for ii = 1:size(tsFindex,1)
+            timestamp_dsp(ii) = Timestamp_treadmill(tsFindex(ii)) - actual_start_time;
+        end
+        spiketimes.("n" + sprintf('%04d',i)) = timestamp_dsp(find(spiketrain_cell)); % Get timestamp of spikes idx
+    end
+    
+    save('spiketrain.mat', 'spiketrain', '-v7.3');
+    save('spiketimes.mat', 'spiketimes', '-v7.3');
     
 end
 

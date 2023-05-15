@@ -93,16 +93,17 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                     group_id = 'O_APP';
                 end
                 
-                if ismember(mice_no,[45 49 50 59 60 61 81]) % Male
-                    
-                else % Female
-                end
+%                 if ismember(mice_no,[45 49 50 40 41 47 48 67 70 72 21 22 38 39 19 20 35 37 83 84 85]) % Male
+%                     
+%                 else % Female
+%                 end
                 
                 try
                     data.sessionCombined.(group_id).(subFolders(i).name(1:4)) = load('Stats/training_stats.mat').training_stats;
                 catch
-                    miceData = mtmice('auto','Training');
-                    data.sessionCombined.(group_id).(subFolders(i).name(1:4)) = load('Stats/training_stats.mat').training_stats;
+                    fprintf("Failed to load training_stats.mat. \n");
+%                     miceData = mtmice('auto','Training');
+%                     data.sessionCombined.(group_id).(subFolders(i).name(1:4)) = load('Stats/training_stats.mat').training_stats;
                 end
                 nMice = nMice + 1;
                 

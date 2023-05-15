@@ -9,8 +9,7 @@ function [r,varargout] = get(obj,varargin)
 %
 %   Dependencies: 
 
-Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'MeanVel',0, 'MedianVel',0, 'TrialVel',0, 'Vel',0, 'MiceVelDist',0, 'MiceVelBinned',0,'LickPrc',0, ...
-              'MiceLickBurstWidth',0, 'LickBurstWidth',0, 'MiceLickPosition',0, 'LickTime',0, 'MiceLickTime',0, 'VelLickPrc',0, 'MiceVelLickPrc',0,'VelStateEstimate',0);
+Args = struct('ObjectLevel',0, 'AnalysisLevel',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -23,10 +22,6 @@ if(Args.ObjectLevel)
 elseif(Args.AnalysisLevel)
 	% specifies that the AnalysisLevel of the object is 'AllIntragroup'
 	r = 'Single';
-elseif (Args.MeanVel | Args.MedianVel | Args.TrialVel | Args.LickPrc | Args.VelLickPrc | Args.LickTime)
-    r = length(fieldnames(obj.data.sessionCombined));
-elseif (Args.MiceVelDist | Args.MiceVelBinned | Args.MiceVelLickPrc | Args.MiceLickBurstWidth | Args.MiceLickPosition | Args.MiceLickTime | Args.VelStateEstimate)
-    r = obj.data.nMice;
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way

@@ -174,7 +174,7 @@ if(~isempty(Args.NumericArguments))
         plot_start_idx = obj.data.TrialTime_idx(trial,1);
         plot_end_idx = obj.data.TrialTime_idx(trial,2);
                 
-        subplot(2,1,1);
+        subplot(5,1,1);
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,5)*2, 'r'); xlabel('Time (s)');
         hold on
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,6), 'k'); title('Licks'); xlabel('Time (s)');
@@ -182,30 +182,30 @@ if(~isempty(Args.NumericArguments))
         ax.YAxis.Visible = 'off';
         hold off
         
-%         subplot(5,1,2);
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,5)*30, 'r'); xlabel('Time (s)');
-%         hold on
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
-%         hold off
-%         
-%         subplot(5,1,3);
-%         yyaxis left
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
-%         hold on
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_count(plot_start_idx:plot_end_idx,4)*100, 'k');
-%         yyaxis right
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged(plot_start_idx:plot_end_idx,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
-%         hold off
-%         
-%         subplot(5,1,4);
-%         yyaxis left
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
-%         hold on
-%         yyaxis right
-%         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
-%         hold off
+        subplot(5,1,2);
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,5)*30, 'r'); xlabel('Time (s)');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
+        hold off
         
-        subplot(2,1,2);
+        subplot(5,1,3);
+        yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
+        hold on
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_count(plot_start_idx:plot_end_idx,4)*100, 'k');
+        yyaxis right
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.velocity_averaged(plot_start_idx:plot_end_idx,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
+        hold off
+        
+        subplot(5,1,4);
+        yyaxis left
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
+        hold on
+        yyaxis right
+        plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.lick_freq(plot_start_idx:plot_end_idx), 'k'); title('Lick Frequency'); xlabel('Time (s)');ylabel('Hertz (Hz)');
+        hold off
+        
+        subplot(5,1,5);
         yyaxis left
         plot(obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,1), obj.data.session_data_exclude_zero_trials(plot_start_idx:plot_end_idx,7)*100, 'b'); title('Distance'); xlabel('Time (s)'); ylabel('Distance (Bin)'); xline(obj.data.data_trial(trial,3), 'r');
         hold on

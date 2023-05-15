@@ -21,7 +21,7 @@ Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
 % to objects that are being asked for. Only arguments that affect the data
 % saved in objects should be listed here.
-Args.DataCheckArgs = {'BinSize', 'ThresVel','Training',};                         
+Args.DataCheckArgs = {'BinSize', 'ThresVel','Training'};                         
 
 [Args,modvarargin] = getOptArgs(varargin,Args, ...
 	'subtract',{'RedoLevels','SaveLevels'}, ...
@@ -137,7 +137,7 @@ if(true) % ~isempty(dir(Args.RequiredFile))
                     if Args.RedoSess
                         sessionData = mtsess('auto','redo','save').data;
                     else
-                        sessionData = mtsess('auto','save').data;
+                        sessionData = mtsess('auto').data;
                     end
                 end
             

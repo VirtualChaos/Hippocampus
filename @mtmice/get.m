@@ -10,10 +10,10 @@ function [r,varargout] = get(obj,varargin)
 %   Dependencies: 
 
 Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'MatchedFiringRateMap',0, 'MatchedCorrMatrix',0,'PlaceFieldPositionEntropy',0,...
-          'AdSm',0,'Vel',0,'VelBinned',0,'VelDist',0,'Lick',0,'LickPrc',0,'LickBurstWidth',0,'LickRZEstimate',0,...
+          'AdSm',0,'Vel',0,'VelBinned',0,'VelDist',0,'VelPosition',0,'Lick',0,'LickPosition',0,'LickPrc',0,'LickBurstWidth',0,'LickRZEstimate',0,...
           'VelStateEstimate',0);
 Args.flags = {'LabelsOff','ArgsOnly','MatchedFiringRateMap','MatchedCorrMatrix','PlaceFieldPositionEntropy',...
-                'AdSm','Vel','VelBinned','VelDist','Lick','LickPrc','LickBurstWidth','LickRZEstimate','VelStateEstimate'};
+                'AdSm','Vel','VelBinned','VelDist','VelPosition','Lick','LickPosition','LickPrc','LickBurstWidth','LickRZEstimate','VelStateEstimate'};
 Args.flags = {'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -34,7 +34,7 @@ elseif(Args.VelBinned)
     r = ceil(size(fieldnames(obj.data.sessionCombined),1) / 12);
 elseif(Args.LickBurstWidth)
     r = 4;
-elseif(Args.VelStateEstimate)
+elseif(Args.VelStateEstimate | Args.PlaceFieldPositionEntropy)
     r = 2;
 else
 	% if we don't recognize and of the options, pass the call to parent

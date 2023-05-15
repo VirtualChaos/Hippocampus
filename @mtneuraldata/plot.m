@@ -341,9 +341,17 @@ if(~isempty(Args.NumericArguments))
         
     elseif(Args.FluorescenceTrace)
         
-        place_cell_sort = sortrows(obj.data.placefieldStats,[1 4]);
-        [c, ia, ic] = unique(place_cell_sort(:,1),'last');
-        place_cell_sort = sortrows(place_cell_sort(ia,:),[2 1]);
+        % 95% SIC and GMM criteria
+%         place_cell_sort = sortrows(obj.data.placefieldStats,[1 4]);
+%         [c, ia, ic] = unique(place_cell_sort(:,1),'last');
+%         place_cell_sort = sortrows(place_cell_sort(ia,:),[2 1]);
+        
+        % Only 95% SIC criteria
+        place_cell = obj.data.isplacecell(obj.data.isplacecell(:,4) == 1,:);
+        binFiringRate_trialAveraged = squeeze(mean(obj.data.binFiringRate(place_cell(:,1),:,:),2));
+        [~,maxFiringRateBin] = max(binFiringRate_trialAveraged,[],2);
+        place_cell = [place_cell maxFiringRateBin];
+        place_cell_sort = sortrows(place_cell, 6);
         
         subplot(1,2,1)
         maps_all_combined = [];

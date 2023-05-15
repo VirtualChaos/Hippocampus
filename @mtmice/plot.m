@@ -5,10 +5,11 @@ function [obj, varargout] = plot(obj,varargin)
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
           'MatchedFiringRateMap',0, 'MatchedCorrMatrix',0,'PlaceFieldPositionEntropy',0,...
-          'AdSm',0,'Vel',0,'VelBinned',0,'VelDist',0,'Lick',0,'LickPrc',0,'LickBurstWidth',0,'LickRZEstimate',0,...
-          'VelStateEstimate',0,'MatchedStats',0);
+          'AdSm',0,'Vel',0,'VelBinned',0,'VelDist',0,'VelPosition',0,'Lick',0,'LickPosition',0,'LickPrc',0,...
+          'LickBurstWidth',0,'LickRZEstimate',0,'VelStateEstimate',0,'MatchedStats',0);
 Args.flags = {'LabelsOff','ArgsOnly','MatchedFiringRateMap','MatchedCorrMatrix','PlaceFieldPositionEntropy',...
-                'AdSm','Vel','VelBinned','VelDist','Lick','LickPrc','LickBurstWidth','LickRZEstimate','VelStateEstimate','MatchedStats'};
+                'AdSm','Vel','VelBinned','VelDist','VelPosition','Lick','LickPosition','LickPrc','LickBurstWidth','LickRZEstimate',...
+                'VelStateEstimate','MatchedStats'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -212,22 +213,39 @@ if(~isempty(Args.NumericArguments))
                
     elseif(Args.PlaceFieldPositionEntropy)
         sess_list = fieldnames(obj.data.neuralCombined);
-        for sess_no = 1:size(sess_list,1)
-            subplot(2,ceil(size(sess_list,1)/2),sess_no);
-            title("Place field positions"); xlabel('Position Bins'); ylabel('Count');
-            neuralData = obj.data.neuralCombined.(sess_list{sess_no});
-            
-            bounds = [floor(neuralData.placefieldStats(:,2) - neuralData.placefieldStats(:,3)) ceil(neuralData.placefieldStats(:,2) + neuralData.placefieldStats(:,3))];
-            combined_bins = [];
-            for i = 1:size(bounds,1)
-               combined_bins = [combined_bins bounds(i,1):bounds(i,2)];
+        
+        if n == 1
+            for sess_no = 1:size(sess_list,1)
+                subplot(2,ceil(size(sess_list,1)/2),sess_no);
+                title("Place field positions"); xlabel('Position Bins'); ylabel('Count');
+                neuralData = obj.data.neuralCombined.(sess_list{sess_no});
+                sessionData = obj.data.sessionCombined.(sess_list{sess_no});
+                                
+                y_data = histcounts(neuralData.placefieldStats(:,2),100);
+                y_data = y_data ./ sum(y_data);
+                bar([-49:50], [y_data(51:end) y_data(1:50)]);
+                title("D" + obj.data.sessionDays(sess_no) + "; " + sessionData.date);
             end
-            combined_bins(combined_bins < 1) = combined_bins(combined_bins < 1) + 100;
-            combined_bins(combined_bins > 100) = combined_bins(combined_bins > 100) - 100;
-            
-            y_data = histcounts(combined_bins,100);
-            y_data = y_data ./ sum(y_data);
-            bar([-49:50], [y_data(51:end) y_data(1:50)]);            
+        elseif n == 2
+            for sess_no = 1:size(sess_list,1)
+                subplot(2,ceil(size(sess_list,1)/2),sess_no);
+                title("Place field positions"); xlabel('Position Bins'); ylabel('Count');
+                neuralData = obj.data.neuralCombined.(sess_list{sess_no});
+                sessionData = obj.data.sessionCombined.(sess_list{sess_no});
+                
+                bounds = [floor(neuralData.placefieldStats(:,2) - neuralData.placefieldStats(:,3)) ceil(neuralData.placefieldStats(:,2) + neuralData.placefieldStats(:,3))];
+                combined_bins = [];
+                for i = 1:size(bounds,1)
+                    combined_bins = [combined_bins bounds(i,1):bounds(i,2)];
+                end
+                combined_bins(combined_bins < 1) = combined_bins(combined_bins < 1) + 100;
+                combined_bins(combined_bins > 100) = combined_bins(combined_bins > 100) - 100;
+                
+                y_data = histcounts(combined_bins,100);
+                y_data = y_data ./ sum(y_data);
+                bar([-49:50], [y_data(51:end) y_data(1:50)]);
+                title("D" + obj.data.sessionDays(sess_no) + "; " + sessionData.date);
+            end
         end
         
     elseif(Args.AdSm)
@@ -323,29 +341,44 @@ if(~isempty(Args.NumericArguments))
 %         imagesc(velocity_binned); colormap hot
 %         title(sessionData.date);
         
-        for block_no = 1:12
-            subplot(3,4,block_no)
-            sess_list = fieldnames(obj.data.sessionCombined);
-            session_no = 12 * (n - 1) + block_no;
+%         for block_no = 1:12
+%             subplot(3,4,block_no)
+%             sess_list = fieldnames(obj.data.sessionCombined);
+%             session_no = 12 * (n - 1) + block_no;
+%             
+%             if session_no <= length(fieldnames(obj.data.sessionCombined))
+%                 sessionData = obj.data.sessionCombined.(sess_list{session_no});
+%                 
+% %                 velocity_binned = zeros(sessionData.nTrials, sessionData.Args.BinSize);
+% %                 for i = 1:sessionData.nTrials
+% %                     for j = 1:sessionData.Args.BinSize
+% %                         velocity_binned = sessionData.velocity_binned;
+% %                     end
+% %                 end
+%                 velocity_binned = sessionData.velocity_binned;
+%                 velocity_binned = [velocity_binned(51:end); velocity_binned(1:50)];
+%                 
+%                 % Smoothing
+%                 for row = 1:sessionData.nTrials
+%                     velocity_binned(row,:) = smooth(velocity_binned(row,:));
+%                 end
+%                 
+%                 imagesc(velocity_binned'); colormap hot; colorbar
+%                 title(sessionData.date);
+%             end
+%         end
+        
+        sess_list = fieldnames(obj.data.sessionCombined);
+        index = reshape(1:ceil(length(fieldnames(obj.data.sessionCombined))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(obj.data.sessionCombined))
+            subplot(ceil(length(fieldnames(obj.data.sessionCombined))/5),5,index(sess_no))
+            sessionData = obj.data.sessionCombined.(sess_list{sess_no});
             
-            if session_no <= length(fieldnames(obj.data.sessionCombined))
-                sessionData = obj.data.sessionCombined.(sess_list{session_no});
-                
-                velocity_binned = zeros(sessionData.nTrials, sessionData.Args.BinSize);
-                for i = 1:sessionData.nTrials
-                    for j = 1:sessionData.Args.BinSize
-                        velocity_binned = sessionData.velocity_binned;
-                    end
-                end
-                
-                % Smoothing
-                for row = 1:sessionData.nTrials
-                    velocity_binned(row,:) = smooth(velocity_binned(row,:));
-                end
-                
-                imagesc(velocity_binned); colormap hot; colorbar
-                title(sessionData.date);
-            end
+            velocity_binned = sessionData.velocity_binned;
+            velocity_binned = [velocity_binned(51:end); velocity_binned(1:50)];
+                        
+            imagesc(velocity_binned'); colormap hot; colorbar
+            title("D" + obj.data.sessionDays(sess_no) + "; " + sessionData.date);
         end
             
     elseif(Args.VelDist)
@@ -372,6 +405,23 @@ if(~isempty(Args.NumericArguments))
             histogram(220./sessionData.data_trial(:,4),edges); title("D" + obj.data.sessionDays(sess_no));% ylabel('Velocity (cm/s)');
             xline(mean(220./sessionData.data_trial(:,4), 'omitnan'));
         end
+      
+    elseif(Args.VelPosition)
+        
+        sess_list = fieldnames(obj.data.sessionCombined);
+        index = reshape(1:ceil(length(fieldnames(obj.data.sessionCombined))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(obj.data.sessionCombined))
+            subplot(ceil(length(fieldnames(obj.data.sessionCombined))/5),5,index(sess_no))
+            sessionData = obj.data.sessionCombined.(sess_list{sess_no});
+            
+            vel_binned = reshape(sessionData.data_bin(:,8),100,sessionData.nTrials)';
+            vel_binned = [zeros(1,100); vel_binned;]; % Pad one trial (100 bins) before
+            vel_binned = reshape(vel_binned.',1,[]); % Flatten array
+            vel_binned = circshift(vel_binned,-50); % Shift array 50 bins behind
+            vel_binned = reshape(vel_binned,100,sessionData.nTrials+1)'; % Restore array
+            imagesc(vel_binned); colorbar;
+            title("D" + obj.data.sessionDays(sess_no) + "; " + sessionData.date);
+        end
         
     elseif(Args.Lick)
         sess_no = n;
@@ -392,6 +442,26 @@ if(~isempty(Args.NumericArguments))
         yyaxis right
         plot(sessionData.session_data_exclude_zero_trials(:,1),sessionData.velocity_averaged(:,4)); title('Velocity'); xlabel('Time (s)'); ylabel('Velocity (cm/s)');
         hold off
+        
+    elseif(Args.LickPosition)
+%         sess_no = n;
+%         sess_list = fieldnames(obj.data.sessionCombined);
+%         sessionData = obj.data.sessionCombined.(sess_list{sess_no});
+        
+        sess_list = fieldnames(obj.data.sessionCombined);
+        index = reshape(1:ceil(length(fieldnames(obj.data.sessionCombined))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(obj.data.sessionCombined))
+            subplot(ceil(length(fieldnames(obj.data.sessionCombined))/5),5,index(sess_no))
+            sessionData = obj.data.sessionCombined.(sess_list{sess_no});
+        
+            lick_count_binned = sessionData.lick_count_binned';
+            lick_count_binned = [zeros(1,100); lick_count_binned;]; % Pad one trial (100 bins) before
+            lick_count_binned = reshape(lick_count_binned.',1,[]); % Flatten array
+            lick_count_binned = circshift(lick_count_binned,-50); % Shift array 50 bins behind
+            lick_count_binned = reshape(lick_count_binned,100,sessionData.nTrials+1)'; % Restore array
+            imagesc(lick_count_binned); colorbar;
+            title("D" + obj.data.sessionDays(sess_no) + "; " + sessionData.date);
+        end
         
     elseif(Args.LickPrc)
         sess_list = fieldnames(obj.data.sessionCombined);
@@ -500,6 +570,7 @@ if(~isempty(Args.NumericArguments))
             bar([-49:50], y_data_combined,0.5,'r');
             ylabel("Density (Lick Burst Widths)"); xlabel("Distance (Bin)");
         end
+        
         
     elseif(Args.LickRZEstimate)
         sess_list = fieldnames(obj.data.sessionCombined);

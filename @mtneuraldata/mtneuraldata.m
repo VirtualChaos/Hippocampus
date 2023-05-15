@@ -182,7 +182,7 @@ if(~isempty(dir(Args.RequiredFile)))
             try
                 log_likelihood(i,2) = data.placefieldData.(fns{i}).log_likelihood;
             catch
-                data.placefieldData.(fns{i})
+                %data.placefieldData.(fns{i})
             end
             aic(i,2) = data.placefieldData.(fns{i}).aic;
             bic(i,2) = data.placefieldData.(fns{i}).bic;

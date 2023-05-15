@@ -14,7 +14,7 @@ function [obj, varargout] = mtneural(varargin)
 %dependencies: 
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
-				'ObjectLevel','Session','RequiredFile','mtcellcombined.mat', 'NumericArguments', [], ...
+				'ObjectLevel','Session','RequiredFile','cellBlockList.txt', 'NumericArguments', [], ...
 				'BinSize',100, 'ThresVel',1, 'FiltFrac',0.6, 'PeakThreshold',3, 'TrialPeakThreshold',1, 'TrialPeakCheckFrac',2/3);
             
 Args.flags = {'Auto','ArgsOnly'};
@@ -64,10 +64,43 @@ if(~isempty(dir(Args.RequiredFile)))
     data.origin = {pwd};
     foldername = pwd;
     
+    cd ..
     sessionData = mtsess('Auto', varargin{:});
     sessionData = sessionData.data;
-    cellcombinedData = mtcellcombined('Auto', varargin{:});
-    cellcombinedData = cellcombinedData.data;
+    
+    spiketimes = load('spiketimes.mat');
+    spiketimes = spiketimes.spiketimes;
+    spiketrain = load('spiketrain.mat');
+    spiketrain = spiketrain.spiketrain;
+        
+    cd(ori);
+%     cellcombinedData = mtcellcombined('Auto', varargin{:});
+%     cellcombinedData = cellcombinedData.data;
+    
+    cellcombinedData = [];
+    cellBlockList = string(importdata(Args.RequiredFile));
+    for cellBlock_no = 1:length(cellBlockList)
+        
+        cd(strcat(ori, '/', cellBlockList(cellBlock_no)));
+        try
+            cellcombinedData_temp = load('mtcellcombined.mat');
+            cellcombinedData_temp = cellcombinedData_temp.mtcellcombined.data;
+        catch
+            fprintf("Rerun mtcellcombined for %s\n", cellBlockList(cellBlock_no));
+            cellcombinedData_temp = mtcellcombined('auto','save','redo').data;
+        end
+        cellBlockFieldnames = fieldnames(cellcombinedData_temp.cellData);
+        start_cell_name = char(cellBlockFieldnames(1));
+        start_cell_idx = str2num(start_cell_name(2:5));
+        end_cell_name = char(cellBlockFieldnames(end));
+        end_cell_idx = str2num(end_cell_name(2:5));
+        for cell_idx = start_cell_idx:end_cell_idx
+            cellcombinedData.("n" + sprintf('%04d',cell_idx)) = cellcombinedData_temp.cellData.("n" + sprintf('%04d',cell_idx));
+        end
+        clear cellcombinedData_temp
+
+        cd(ori)
+    end
     
     isplacecell = zeros(sessionData.nTrials,5);
     shuffled_sic_values = zeros(sessionData.nTrials, 10000);
@@ -97,10 +130,10 @@ if(~isempty(dir(Args.RequiredFile)))
     isplacecell(:,5) = isplacecell(:,2) > prctile(shuffled_sic_values,95,'all');
     
     % Organising data to store
-    spiketimes = load('spiketimes.mat');
-    spiketimes = spiketimes.spiketimes;
-    spiketrain = load('spiketrain.mat');
-    spiketrain = spiketrain.spiketrain;
+%     spiketimes = load('spiketimes.mat');
+%     spiketimes = spiketimes.spiketimes;
+%     spiketrain = load('spiketrain.mat');
+%     spiketrain = spiketrain.spiketrain;
     
     data.placefieldData = placefieldData;
     data.spiketimes = spiketimes;
@@ -145,7 +178,7 @@ if(~isempty(dir(Args.RequiredFile)))
             try
                 log_likelihood(i,2) = data.placefieldData.(fns{i}).log_likelihood;
             catch
-                data.placefieldData.(fns{i})
+                %data.placefieldData.(fns{i})
             end
             aic(i,2) = data.placefieldData.(fns{i}).aic;
             bic(i,2) = data.placefieldData.(fns{i}).bic;
@@ -157,7 +190,7 @@ if(~isempty(dir(Args.RequiredFile)))
             placecellStats(i,3) = mean(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Mean firing rate
             placecellStats(i,4) = std(data.cellData.(fns{i}).maps_adsm,'omitnan'); % Stdev firing rate
             if ~isempty(data.placefieldData.(fns{i}).GMM)
-                temp = repmat(cell_idx,size(data.placefieldData.(fns{i}).GMM,1),1);
+                temp = repmat(i,size(data.placefieldData.(fns{i}).GMM,1),1);
                 placefieldStats = cat(1, placefieldStats, [temp data.placefieldData.(fns{i}).GMM]);
             end
         else

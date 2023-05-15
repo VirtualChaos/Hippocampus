@@ -4,10 +4,10 @@ function [obj, varargout] = plot(obj,varargin)
 
 Args = struct('LabelsOff',0,'GroupPlots',1,'GroupPlotIndex',1,'Color','b', ...
 		  'ReturnVars',{''}, 'ArgsOnly',0, 'Cmds','', ...
-          'MeanVel',0, 'MedianVel',0, 'TrialVel',0, 'MiceVelDist',0, 'LickPrc',0, 'LickBurstWidth',0, 'MiceLickBurstWidth',0, ...
-          'VelLickPrc',0, 'MiceVelLickPrc',0,'VelStateEstimate',0);
-Args.flags = {'LabelsOff','ArgsOnly','MeanVel','MedianVel','TrialVel','MiceVelDist','LickPrc', 'LickBurstWidth', ...
-          'MiceLickBurstWidth', 'VelLickPrc','MiceVelLickPrc','VelStateEstimate'};
+          'MeanVel',0, 'MedianVel',0, 'TrialVel',0, 'MiceVelDist',0, 'Vel',0, 'MiceVelBinned',0, 'LickPrc',0, 'LickBurstWidth',0, 'MiceLickBurstWidth',0, ...
+          'MiceLickPosition',0,'LickTime',0,'MiceLickTime',0,'VelLickPrc',0, 'MiceVelLickPrc',0,'VelStateEstimate',0);
+Args.flags = {'LabelsOff','ArgsOnly','MeanVel','MedianVel','TrialVel','MiceVelDist','Vel','MiceVelBinned','LickPrc', 'LickBurstWidth', ...
+          'MiceLickBurstWidth','MiceLickPosition','LickTime','MiceLickTime','VelLickPrc','MiceVelLickPrc','VelStateEstimate'};
 [Args,varargin2] = getOptArgs(varargin,Args);
 
 % if user select 'ArgsOnly', return only Args structure for an empty object
@@ -108,6 +108,167 @@ if(~isempty(Args.NumericArguments))
 %             xline(mean(220./sessionData.data_trial(:,4), 'omitnan'),'LineWidth',2);
         end
         
+    elseif(Args.MiceVelBinned)
+        fns = fieldnames(obj.data.sessionCombined);
+        mice_id = [];
+        for group_no = 1:4
+            temp1 = repmat(group_no,length(fieldnames(obj.data.sessionCombined.(fns{group_no}))),1);
+            temp2 = [1:length(fieldnames(obj.data.sessionCombined.(fns{group_no})))]';
+            mice_id = [mice_id; [temp1 temp2]];
+        end
+        
+        group_id = (fns{mice_id(n,1)});
+        groupData = obj.data.sessionCombined.(group_id);
+        
+        fns = fieldnames(groupData);
+        miceData = groupData.(fns{mice_id(n,2)});
+        sess_list = fieldnames(miceData.data_trial);
+        
+        mice_no = char(fns(mice_id(n,2)));
+        mice_no = str2num(mice_no(3:4));
+        sessionDate = obj.data.sessionDate(find(obj.data.sessionDate(:,1) == mice_no),:);
+        
+        index = reshape(1:ceil(length(fieldnames(miceData.data_trial))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(miceData.data_trial))
+            subplot(ceil(length(fieldnames(miceData.data_trial))/5),5,index(sess_no))
+            velocity_binned = miceData.velocity_binned.(sess_list{sess_no});
+            if size(velocity_binned,2) > 1 % Average across trials
+                velocity_binned = mean(velocity_binned,1,'omitnan')';
+            end
+            velocity_binned = [velocity_binned(51:end); velocity_binned(1:50)];
+                        
+            %imagesc(velocity_binned'); colormap hot; colorbar
+            plot(velocity_binned');
+            xline(51,'r--'); yline(mean(velocity_binned),'b--')
+            title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no) + "; " + sessionDate(sess_no,2));   
+        end
+    
+        elseif(Args.Vel)
+        
+            for group_no = 1:4
+                %             ha = subplot(2,2,group_no)
+                switch group_no
+                    case 1
+                        ha = subplot(2,2,2)
+                    case 2
+                        ha = subplot(2,2,1)
+                    case 3
+                        ha = subplot(2,2,4)
+                    case 4
+                        ha = subplot(2,2,3)
+                end
+                fns = fieldnames(obj.data.sessionCombined);
+                group_id = fns{group_no};
+                
+                groupData = obj.data.sessionCombined.(group_id);
+                fns2 = fieldnames(groupData);
+                y_data_combined_mice = [];
+                nTrials = [];
+                for mice_no = 1:length(fieldnames(groupData))
+                    miceData = groupData.(fns2{mice_no});
+                    sess_list = fieldnames(miceData.data_trial);
+                    
+                    mean_vel = miceData.average_track_velocity(:,1);
+                    vel_binned_combined = zeros(length(sess_list),1);
+                    
+                    padSize = floor(5/2); % 5 days sliding window
+                    mean_vel_padded = padarray(mean_vel, padSize, 'replicate');
+                    mean_vel_window_smooth = zeros(size(mean_vel,1), 1);
+                    for i = 1+padSize:size(mean_vel, 1)+padSize
+                        mean_vel_window_smooth(i - padSize) = mean(mean_vel_padded((i - padSize):(i + padSize)));
+                    end
+                    
+                    for sess_no = 1:length(fieldnames(miceData.data_trial))
+                        sessionData.velocity_binned = miceData.velocity_binned.(sess_list{sess_no});
+                        vel_binned_combined(sess_no) = mean(sessionData.velocity_binned(51:end),'omitnan');
+                    end
+                    upper_vel_thres = mean(vel_binned_combined(ceil(length(vel_binned_combined)/2):end),'omitnan');
+                    lower_vel_thres = min(vel_binned_combined(1:ceil(length(vel_binned_combined)/2)),[],'omitnan');
+                    
+                    % Assumption 1:
+                    % Initial state (low velocity regime) can be estimated using mean velocity of first session
+                    % Assumption 2:
+                    % Final state (high velocity regime) can be estimated using mean velocity of second half of all sessions
+                    
+                    mu = zeros(length(sess_list),2);
+                    mu(1,:) = [lower_vel_thres upper_vel_thres];
+                    sigma = zeros(length(sess_list),1,1,2);
+                    sigma(1,:) = cat(3,[1],[1]);
+                    mix_prop = zeros(length(sess_list),2);
+                    mix_prop(1,:) = [0.99 0.01];%[0.99 0.01];
+                    
+                    decision_state = zeros(length(sess_list),5);
+                    
+                    mice_velocity_binned = zeros(length(sess_list),100);
+                    for sess_no = 1:length(fieldnames(miceData.data_trial))
+                        sessionData.velocity_binned = miceData.velocity_binned.(sess_list{sess_no});
+                        
+                        if sess_no > 1
+                            mu(sess_no,:) = [lower_vel_thres upper_vel_thres];
+                            sigma(sess_no,:) = cat(3,[1],[1]);
+                            mix_prop(sess_no,:) = decision_state(sess_no-1,1:2);
+                            if mix_prop(sess_no,1) == 0
+                                mix_prop(sess_no,1) = mix_prop(sess_no,1) + eps;
+                            end
+                        end
+                        
+                        % Obtain prior
+                        gm = gmdistribution(mu(sess_no,:)',sigma(sess_no,:,:,:),mix_prop(sess_no,:));
+                        gmPDF = pdf(gm,[0:0.1:40]');
+                        gmPDF = gmPDF / sum(gmPDF);
+                        %plot(0:0.1:40,gmPDF,'b-');
+                        %title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no));
+                        %%xlabel('Velocity (cm/s)'); xlim([0 40]);
+                        %hold on
+                        
+                        %observation = mean(sessionData.velocity_binned(51:end),'omitnan');
+                        %observation = mean(bootstrap_vel,'omitnan');
+                        observation = mean_vel_window_smooth(sess_no);
+                        [gm_posterior,nlogL] = posterior(gm,observation);
+                        %[gm_posterior,nlogL] = posterior(gm,gmPDF2);
+                        
+                        covNames = {'diagonal','full'};
+                        CovType = find(strncmpi(gm.CovType,covNames,length(gm.CovType)));
+                        nlog_lh = wdensity_dupe(observation,gm.mu, gm.Sigma, gm.PComponents, gm.SharedCov, CovType) * -1; %nLogL for individual components
+                        
+                        decision_state(sess_no,:) = [gm_posterior nlogL nlog_lh];
+                        
+                        velocity_binned = miceData.velocity_binned.(sess_list{sess_no});
+                        if size(velocity_binned,2) > 1 % Average across trials
+                            velocity_binned = mean(velocity_binned,1,'omitnan')';
+                        end
+                        mice_velocity_binned(sess_no,:) = velocity_binned;
+                    end
+                    
+                    trained_sess_idx = find(decision_state(:,2) > 0.95,1,'first');
+                    y_data_combined_mice = [y_data_combined_mice; mean(mice_velocity_binned(trained_sess_idx:end,:),'omitnan')];
+                    nTrials = [nTrials; sum(groupData.(fns2{mice_no}).nTrials(trained_sess_idx:end),'omitnan')];
+                end
+                adjusted_y_data_combined_mice = [y_data_combined_mice(:,51:end) y_data_combined_mice(:,1:50)];
+                
+                adjusted_y_data_combined_group = mean(adjusted_y_data_combined_mice,'omitnan');
+                bar([-49:50],adjusted_y_data_combined_group);
+                title(group_id);
+                hold on
+                trial_no = sum(nTrials,'omitnan');
+                
+                %             f = fit([-49:50]',adjusted_y_data_combined_group','gauss1');
+                %             plot(f,'k-');
+                %             delete(findobj('type','legend'))
+                %
+                %             text(5, 1.3*max(adjusted_y_data_combined_group), {"Trials: " + trial_no, "Peak: " + f.b1 + ", StDev: " + f.c1},'FontSize',12);
+                %             xlabel('Position (Bins)'); ylabel('Density');
+                %             xlim([-49 50]); ylim(ha,[0 1.5*max(adjusted_y_data_combined_group)]);
+                
+                %yyaxis right
+                ft = fittype('piecewiseLine(x,a,b,k)');
+                f = fit([-49:50]',adjusted_y_data_combined_group',ft,'StartPoint',[1,1,0],'Lower',[1,1,0],'Upper',[Inf,Inf,Inf])
+                mu = f.a * f.b;
+                sigma = f.a * (f.b)^2;
+                ylim([0 21])
+                
+            end
+            
     elseif(Args.LickPrc)
         fns = fieldnames(obj.data.sessionCombined);
         group_id = fns{n};
@@ -124,7 +285,17 @@ if(~isempty(Args.NumericArguments))
     elseif(Args.LickBurstWidth)
         
         for group_no = 1:4
-            ha = subplot(2,2,group_no)
+%             ha = subplot(2,2,group_no)
+            switch group_no
+                case 1
+                    ha = subplot(2,2,2)
+                case 2
+                    ha = subplot(2,2,1)
+                case 3
+                    ha = subplot(2,2,4)
+                case 4
+                    ha = subplot(2,2,3)
+            end
             fns = fieldnames(obj.data.sessionCombined);
             group_id = fns{group_no};
             
@@ -188,9 +359,9 @@ if(~isempty(Args.NumericArguments))
                     %%xlabel('Velocity (cm/s)'); xlim([0 40]);
                     %hold on
                                         
-                    observation = mean(sessionData.velocity_binned(51:end),'omitnan');
+                    %observation = mean(sessionData.velocity_binned(51:end),'omitnan');
                     %observation = mean(bootstrap_vel,'omitnan');
-                    %observation = mean_vel_window_smooth(sess_no);
+                    observation = mean_vel_window_smooth(sess_no);
                     [gm_posterior,nlogL] = posterior(gm,observation);
                     %[gm_posterior,nlogL] = posterior(gm,gmPDF2);
                     
@@ -227,8 +398,10 @@ if(~isempty(Args.NumericArguments))
             f = fit([-49:50]',adjusted_y_data_combined_group',ft,'StartPoint',[1,1,0],'Lower',[1,1,0],'Upper',[Inf,Inf,Inf])
             mu = f.a * f.b;
             sigma = f.a * (f.b)^2;
+            ylim([0 0.25]);
         
         end
+        
         
     elseif(Args.MiceLickBurstWidth)
         
@@ -341,9 +514,13 @@ if(~isempty(Args.NumericArguments))
 %         lb = [0,0.8];
 %         ub = [10,0.8];
         
-        b0 = [5,2];
-        lb = [0,0];
-        ub = [10,5];
+%         b0 = [5,2];
+%         lb = [0,0];
+%         ub = [10,5];
+        
+        b0 = [3,2];
+        lb = [3,0];
+        ub = [3,5];
         
         fun = @(k,theta,x) ((1 / gamma(k) .* (theta^k)) .* (x.^(k-1)) .* exp(-(x./theta)));
         [fitobject,gof] = fit(x_space', y_data_combined_baseline_corr', fun, ...
@@ -385,9 +562,157 @@ if(~isempty(Args.NumericArguments))
         text(0.2*max(x_space), 1.1*max(y_data_combined), {"Trials: " + trial_no, "Mean: " + fitobject.b1 + ", StDev: " + fitobject.c1, "rmse: " + gof.rmse},'FontSize',12);
         xlabel('Position (Bins)'); ylabel('Density');
         xlim([0 max(x_space)]); ylim([0 1.3*max(y_data_combined)]);
-
-
+    
+    elseif(Args.MiceLickPosition)
+        fns = fieldnames(obj.data.sessionCombined);
+        mice_id = [];
+        for group_no = 1:4
+            temp1 = repmat(group_no,length(fieldnames(obj.data.sessionCombined.(fns{group_no}))),1);
+            temp2 = [1:length(fieldnames(obj.data.sessionCombined.(fns{group_no})))]';
+            mice_id = [mice_id; [temp1 temp2]];
+        end
         
+        group_id = (fns{mice_id(n,1)});
+        groupData = obj.data.sessionCombined.(group_id);
+        
+        fns = fieldnames(groupData);
+        miceData = groupData.(fns{mice_id(n,2)});
+        sess_list = fieldnames(miceData.data_trial);
+        
+        mice_no = char(fns(mice_id(n,2)));
+        mice_no = str2num(mice_no(3:4));
+        sessionDate = obj.data.sessionDate(find(obj.data.sessionDate(:,1) == mice_no),:);
+        
+        index = reshape(1:ceil(length(fieldnames(miceData.data_trial))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(miceData.data_trial))
+            subplot(ceil(length(fieldnames(miceData.data_trial))/5),5,index(sess_no))
+            lick_count_binned = miceData.lick_count_binned.(sess_list{sess_no});
+            
+            lick_count_binned = [zeros(1,100); lick_count_binned;]; % Pad one trial (100 bins) before
+            lick_count_binned = reshape(lick_count_binned.',1,[]); % Flatten array
+            lick_count_binned = circshift(lick_count_binned,-50); % Shift array 50 bins behind
+            lick_count_binned = reshape(lick_count_binned,100,miceData.nTrials(sess_no)+1)'; % Restore array
+            imagesc(lick_count_binned); colorbar;
+            
+            title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no) + "; " + sessionDate(sess_no,2));
+        end
+    
+    elseif(Args.LickTime)
+        trained_sessionDate = load('/Volumes/HippocampusNew/NTU/Training_data/trained_sessionDate.mat').trained_sessionDate;
+        
+        fns = fieldnames(obj.data.sessionCombined);
+        mice_id = [];
+        for group_no = 1:4
+            temp1 = repmat(group_no,length(fieldnames(obj.data.sessionCombined.(fns{group_no}))),1);
+            temp2 = [1:length(fieldnames(obj.data.sessionCombined.(fns{group_no})))]';
+            mice_id = [mice_id; [temp1 temp2]];
+        end
+        
+        group_id = (fns{n});
+        groupData = obj.data.sessionCombined.(group_id);
+        
+        fns2 = fieldnames(groupData);
+        for mice_idx = 1:length(fns2)
+            subplot(ceil(length(fns2)/3),3,mice_idx)
+            miceData = groupData.(fns2{mice_id(mice_idx,2)});
+            sess_list = fieldnames(miceData.data_trial);
+            
+            mice_no = char(fns2(mice_id(mice_idx,2)));
+            mice_no = str2num(mice_no(3:4));
+            sessionDate = obj.data.sessionDate(find(obj.data.sessionDate(:,1) == mice_no),:);
+            trained_sess_idx = trained_sessionDate(trained_sessionDate(:,3) == mice_no,4);
+            
+            edges = -10:0.5:10.5;
+            N_combined = [];
+            for sess_no = trained_sess_idx:length(fieldnames(miceData.data_trial))
+                lick_timestamps_adjusted = miceData.lick_timestamps_adjusted.(sess_list{sess_no});
+                
+                [N,edges] = histcounts(lick_timestamps_adjusted, edges);
+                N_combined = [N_combined; N];
+            end
+            N_combined = sum(N_combined);
+            plot(edges(1:end-1),N_combined,'k-');
+            xline(0,'k--');
+            ylabel('Lick count'); xlabel('Time (s)');
+            male_mice_id = [59 60 61 64 65 55 56 58 62 63 53 54 68 69 83 84 85];
+            if ismember(mice_no,male_mice_id) % Male
+                title(fns2{mice_id(mice_idx,2)});
+            else % Female
+                title(fns2{mice_id(mice_idx,2)},'Color','r');
+            end
+        end
+        
+    elseif(Args.MiceLickTime)
+        trained_sessionDate = load('/Volumes/HippocampusNew/NTU/Training_data/trained_sessionDate.mat').trained_sessionDate;
+        
+        fns = fieldnames(obj.data.sessionCombined);
+        mice_id = [];
+        for group_no = 1:4
+            temp1 = repmat(group_no,length(fieldnames(obj.data.sessionCombined.(fns{group_no}))),1);
+            temp2 = [1:length(fieldnames(obj.data.sessionCombined.(fns{group_no})))]';
+            mice_id = [mice_id; [temp1 temp2]];
+        end
+        
+        group_id = (fns{mice_id(n,1)});
+        groupData = obj.data.sessionCombined.(group_id);
+        
+        fns = fieldnames(groupData);
+        miceData = groupData.(fns{mice_id(n,2)});
+        sess_list = fieldnames(miceData.data_trial);
+        
+        mice_no = char(fns(mice_id(n,2)));
+        mice_no = str2num(mice_no(3:4));
+        sessionDate = obj.data.sessionDate(find(obj.data.sessionDate(:,1) == mice_no),:);
+        trained_sess_idx = trained_sessionDate(trained_sessionDate(:,3) == mice_no,4);
+        index = reshape(1:ceil(length(fieldnames(miceData.data_trial))/5)*5,5,[]).';
+        for sess_no = 1:length(fieldnames(miceData.data_trial))
+            subplot(ceil(length(fieldnames(miceData.data_trial))/5),5,index(sess_no))
+            lick_timestamps_adjusted = miceData.lick_timestamps_adjusted.(sess_list{sess_no});
+            
+            edges = -10:0.5:10.5;
+            [N,edges] = histcounts(lick_timestamps_adjusted, edges, 'Normalization', 'probability');
+            [M,I] = max(N);
+            plot(edges(1:end-1),N,'k-');
+            xline(0,'k--');
+            ylabel('Lick count PDF'); xlabel('Time (s)');
+            if sess_no < trained_sess_idx % Pre-trained
+                title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no) + "; " + sessionDate(sess_no,2));
+            else % Trained
+                title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no) + "; " + sessionDate(sess_no,2),'Color','r');
+            end
+            hold on
+            x_space = edges(1:end-1);
+            b0 = [0,edges(I),1];
+            lb = [0,-5,0];
+            ub = [1,5,5];
+            
+            if ~isnan(N)
+                [fitobject,gof] = fit(x_space', N', 'gauss1', ...
+                    'StartPoint', b0, ...
+                    'Lower', lb, ...
+                    'Upper', ub, ...
+                    'Robust','off');
+                y_pred = fitobject.a1*exp(-((x_space-fitobject.b1)/fitobject.c1).^2);
+                plot(x_space,y_pred,'r--');
+                text(0.9*min(x_space), 0.9*max(N), {"Mean: " + fitobject.b1 + ", StDev: " + fitobject.c1, "rmse: " + gof.rmse},'FontSize',6);
+            end
+            
+        end
+        
+%         edges = -10:0.5:10.5;
+%         N_combined = [];
+%         for sess_no = trained_sess_idx:length(fieldnames(miceData.data_trial))
+%             lick_timestamps_adjusted = miceData.lick_timestamps_adjusted.(sess_list{sess_no});
+% 
+%             [N,edges] = histcounts(lick_timestamps_adjusted, edges);
+%             N_combined = [N_combined; N];
+%         end
+%         N_combined = sum(N_combined);
+%         plot(edges(1:end-1),N_combined,'k-');
+%         xline(0,'k--');
+%         ylabel('Lick count'); xlabel('Time (s)');
+%         title(fns{mice_id(n,2)});
+            
     elseif(Args.VelLickPrc)
         fns = fieldnames(obj.data.sessionCombined);
         group_id = fns{n};
@@ -439,6 +764,7 @@ if(~isempty(Args.NumericArguments))
         mean_vel = miceData.average_track_velocity(:,1);
         mean_vel_smooth = smooth(miceData.average_track_velocity(:,1),0.1);
         vel_binned_combined = zeros(length(sess_list),1);
+        vel_binned_metric = zeros(length(sess_list),1);
         
         padSize = floor(5/2); % 5 days sliding window
         mean_vel_padded = padarray(mean_vel, padSize, 'replicate');
@@ -450,10 +776,19 @@ if(~isempty(Args.NumericArguments))
         for sess_no = 1:length(fieldnames(miceData.data_trial))
             sessionData.velocity_binned = miceData.velocity_binned.(sess_list{sess_no});
             vel_binned_combined(sess_no) = mean(sessionData.velocity_binned(51:end),'omitnan');
+            if size(sessionData.velocity_binned,2) > 1 % Average across trials
+                sessionData.velocity_binned = mean(sessionData.velocity_binned,1,'omitnan')';
+            end
+            velocity_binned = [sessionData.velocity_binned(51:end); sessionData.velocity_binned(1:50)];
+            vel_binned_metric(sess_no) = mean(velocity_binned([[1:50] [54:end]])) - mean(velocity_binned(51:53));
         end
-        upper_vel_thres = mean(mean_vel(ceil(length(mean_vel)/2):end),'omitnan');
+        
+        %vel_metric = mean_vel;
+        vel_metric = vel_binned_metric;
+        
+        upper_vel_thres = mean(vel_metric(ceil(length(vel_metric)/2):end),'omitnan');
         %lower_vel_thres = mean_vel(1);
-        lower_vel_thres = min(mean_vel(1:ceil(length(mean_vel)/2)),[],'omitnan');
+        lower_vel_thres = min(vel_metric(1:ceil(length(vel_metric)/2)),[],'omitnan');
         
         % Assumption 1:
         % Initial state (low velocity regime) can be estimated using mean velocity of first session
@@ -509,7 +844,7 @@ if(~isempty(Args.NumericArguments))
             %observation = mean(sessionData.velocity_binned(51:end),'omitnan');
             %observation = mean(bootstrap_vel,'omitnan');
             %observation = mean_vel_window_smooth(sess_no);
-            observation = mean_vel(sess_no);
+            observation = vel_metric(sess_no);
             [gm_posterior,nlogL] = posterior(gm,observation);
             %[gm_posterior,nlogL] = posterior(gm,gmPDF2);
             
@@ -521,8 +856,9 @@ if(~isempty(Args.NumericArguments))
                         
         end
 
-        upper_vel_thres2 = mean(mean_vel_window_smooth(ceil(length(mean_vel_window_smooth)/2):end),'omitnan');
-        lower_vel_thres2 = min(mean_vel_window_smooth(1:ceil(length(mean_vel_window_smooth)/2)),[],'omitnan');
+        vel_metric2 = mean_vel_window_smooth;
+        upper_vel_thres2 = mean(vel_metric2(ceil(length(vel_metric2)/2):end),'omitnan');
+        lower_vel_thres2 = min(vel_metric2(1:ceil(length(vel_metric2)/2)),[],'omitnan');
         
         %index = reshape(1:ceil(length(fieldnames(miceData.data_trial))/5)*5,5,[]).';
         for sess_no = 1:length(fieldnames(miceData.data_trial))
@@ -563,7 +899,8 @@ if(~isempty(Args.NumericArguments))
             
             %observation = mean(sessionData.velocity_binned,'omitnan');
             %observation = mean(bootstrap_vel,'omitnan');
-            observation = mean_vel_window_smooth(sess_no);
+            %observation = mean_vel_window_smooth(sess_no);
+            observation = vel_metric2(sess_no);
             [gm_posterior,nlogL] = posterior(gm,observation);
             %[gm_posterior,nlogL] = posterior(gm,gmPDF2);
             
@@ -578,9 +915,9 @@ if(~isempty(Args.NumericArguments))
         delete(findall(gcf,'Type','textbox'))
         subplot(5,1,1)
         yyaxis left
-        plot(vel_binned_combined,'b.'); xlabel('Sessions'); ylabel('Velocity (cm/s)');
+        plot(vel_metric,'b.'); xlabel('Sessions'); ylabel('Velocity (cm/s)');
         hold on
-        plot(mean_vel_window_smooth,'rx'); xlabel('Sessions'); ylabel('Velocity (cm/s)');
+        %plot(mean_vel_window_smooth,'rx'); xlabel('Sessions'); ylabel('Velocity (cm/s)');
         title(fns{mice_id(n,2)});
         hold on
         %plot(mean_vel_smooth,'b-');
