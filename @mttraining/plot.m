@@ -592,7 +592,9 @@ if(~isempty(Args.NumericArguments))
             lick_count_binned = reshape(lick_count_binned.',1,[]); % Flatten array
             lick_count_binned = circshift(lick_count_binned,-50); % Shift array 50 bins behind
             lick_count_binned = reshape(lick_count_binned,100,miceData.nTrials(sess_no)+1)'; % Restore array
-            imagesc(lick_count_binned); colorbar;
+            lick_binned_combined = sum(lick_count_binned,1);
+            % imagesc(lick_count_binned); colorbar;
+            plot(lick_binned_combined ./ sum(lick_binned_combined));
             
             title(fns{mice_id(n,2)} + " - D" + miceData.sessionDays(sess_no) + "; " + sessionDate(sess_no,2));
         end

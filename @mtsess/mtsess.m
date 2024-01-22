@@ -15,7 +15,7 @@ function [obj, varargout] = mtsess(varargin)
 
 Args = struct('RedoLevels',0, 'SaveLevels',0, 'Auto',0, 'ArgsOnly',0, ...
 				'ObjectLevel','Session','RequiredFile','ID*.mat', 'Spikes', 1, 'NumericArguments', [], ...
-				'BinSize',100, 'ThresVel',1, 'WindowSize', 501);
+				'BinSize',100, 'ThresVel',5, 'WindowSize', 501);
             
 Args.flags = {'Auto','ArgsOnly'};
 % Specify which arguments should be checked when comparing saved objects
