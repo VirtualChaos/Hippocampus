@@ -148,6 +148,8 @@ if(~isempty(dir(Args.RequiredFile)))
         spatialoccupancy(ilocation) = length(IDbin{ilocation}) / length(pos_trial_bin_dsp_firemap);
     end
     j = 0;
+    SICVec = zeros(1,sessionData.nNeuron);
+    SICVecPos = zeros(sessionData.nNeuron,Args.BinSize);
     for i = 1:sessionData.nNeuron
         spiketmp          = spikes_firemap(i,:);
         spikes_repeat     = repmat(spiketmp,nshuffle,1);
@@ -157,7 +159,7 @@ if(~isempty(dir(Args.RequiredFile)))
              Firingrate(i,ilocation)         = sum(spikes_firemap(i,IDbin{ilocation} ))./length(IDbin{ilocation} );    
              Firingrate_shuffle(:,ilocation) = sum(spikes_shuffle(:,IDbin{ilocation}),2)./(size(spikes_shuffle(:,IDbin{ilocation}),2) );
         end         
-        SICVec(i) = SpatialInfo(spatialoccupancy',Firingrate(i,:));
+        [SICVec(i), SICVecPos(i,:)] = SpatialInfo(spatialoccupancy',Firingrate(i,:));
         SICmatrix = cell2mat(arrayfun(@(k) SpatialInfo(spatialoccupancy',Firingrate_shuffle(k,:)),1:nshuffle,'uni',0));  
         if length(find(SICmatrix<SICVec(i)))  > nshuffle *0.95  
             j = j+1;
@@ -172,7 +174,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     %% Select place cell
     placecellPeakAmp   = 0.3; % Place cell criteria: peak amplitude must > 0.3 of maximum
-    placecellFieldMin  = 0.3; % Place cell criteria: field region > 0.3 of peak
+    placecellFieldMin  = 0.5; % Place cell criteria: field region > 0.3 of peak
     placecellInOut     = 3;   % Place cell criteria: In out activity ratio is 3
     placecellGoodtrial = 1/2; % Place cell criteria: Peak inside place field more that half of trials
 
@@ -182,6 +184,8 @@ if(~isempty(dir(Args.RequiredFile)))
     GoodtrialNo     = ceil(sessionData.nTrials*placecellGoodtrial);
     
     Field = {};
+    FieldPeakID = {};
+    FieldSize = {};
     for iNeuron =  1:sessionData.nNeuron
         if ~ismember(iNeuron,placecell_passSIC)
             FieldNo(iNeuron)       = 0;
@@ -191,30 +195,86 @@ if(~isempty(dir(Args.RequiredFile)))
             posmaptrial = squeeze(Firingrate_trial(iNeuron,:,:));
             iField = 1;
             while true
+                if iField >= 4 % criteria
+                    break;
+                end
                 [peak,idx] = max(Firingtmp);
                 if peak <= PeakAmp*max(FiringNeuron) % criteria
                     break;
                 end
                 [~,Peakx] = ind2sub(size(Firingtmp),idx);
-                field     = FindField(Firingtmp,Peakx,1,peak*Fieldthreshold,0,0);   % criteria
-                [fieldboundary,~]          = FieldBoundaries(field,0,0);
+                field     = FindField(Firingtmp,Peakx,1,peak*Fieldthreshold,true,0);   % criteria
+                [fieldboundary,~]          = FieldBoundaries(field,true,0);
                 fieldXmin                  = fieldboundary(1,1);
                 fieldXmax                  = fieldboundary(1,2);
-                activityinfield            = mean(Firingtmp(fieldXmin:fieldXmax));
-                activityoutfield           = mean(Firingtmp([1:fieldXmin fieldXmax:100]));
+                if fieldXmax > fieldXmin
+                    fieldbins = [fieldXmin:fieldXmax];
+                else
+                    fieldXmin = fieldXmin + 1;
+                    fieldXmax = fieldXmax - 1;
+                    fieldbins = [fieldXmin:100 1:fieldXmax];
+                end
+                
+                activityinfield            = mean(Firingtmp(fieldbins),'omitnan');
+                %activityoutfield           = mean(Firingtmp([1:fieldXmin fieldXmax:100]));
+                activityoutfield           = mean(Firingtmp(find(~ismember(1:100,fieldbins))),'omitnan');
                 SingleFieldinoutratio      = activityinfield/activityoutfield;
                 if SingleFieldinoutratio <= In_out_ratio % criteria
                     break
                 end
-                [~,maxind]  = max(posmaptrial,[],2);
-                Goodtrial = find(maxind<=fieldXmax & maxind>=fieldXmin);
+                %[~,maxind]  = max(posmaptrial,[],2);
+%                 Goodtrial = find(maxind<=fieldXmax & maxind>=fieldXmin);
+                [~,maxind]  = maxk(posmaptrial,5,2);
+                Goodtrial = find(any(ismember(maxind,fieldbins),2));
                 if (length(Goodtrial) <= GoodtrialNo)   % criteria
                     break
                 end
-                Field      {iNeuron,iField} = field;
-                FieldPeakID{iNeuron,iField} = Peakx;
-                FieldSize  {iNeuron,iField} = sum(field(:));
-                iField = iField +1;
+                % Check field overlap
+                bin_buffer = 3;
+                fieldbins_check1 = 0;
+                fieldbins_check2 = 0;
+                if iField >= 2
+                    [fieldboundary,~] = FieldBoundaries(Field{iNeuron,iField-1},true,0);
+                    fieldXmin                  = fieldboundary(1,1) - bin_buffer;
+                    fieldXmax                  = fieldboundary(1,2) + bin_buffer;
+                    if fieldXmin <= 0
+                        fieldXmin = fieldXmin + 100;
+                    end
+                    if fieldXmax >= 101
+                        fieldXmax = fieldXmax - 100;
+                    end
+                    if fieldXmax > fieldXmin
+                        fieldbins_check1 = [fieldXmin:fieldXmax];
+                    else
+%                         fieldXmin = fieldXmin + 1;
+%                         fieldXmax = fieldXmax - 1;
+                        fieldbins_check1 = [fieldXmin:100 1:fieldXmax];
+                    end
+                end
+                if iField == 3
+                    [fieldboundary,~] = FieldBoundaries(Field{iNeuron,iField-2},true,0);
+                    fieldXmin                  = fieldboundary(1,1) - bin_buffer;
+                    fieldXmax                  = fieldboundary(1,2) + bin_buffer;
+                    if fieldXmin <= 0
+                        fieldXmin = fieldXmin + 100;
+                    end
+                    if fieldXmax >= 101
+                        fieldXmax = fieldXmax - 100;
+                    end
+                    if fieldXmax > fieldXmin
+                        fieldbins_check2 = [fieldXmin:fieldXmax];
+                    else
+%                         fieldXmin = fieldXmin + 1;
+%                         fieldXmax = fieldXmax - 1;
+                        fieldbins_check2 = [fieldXmin:100 1:fieldXmax];
+                    end
+                end
+                if ~ismember(Peakx,fieldbins_check1) & ~ismember(Peakx,fieldbins_check2)
+                    Field      {iNeuron,iField} = field;
+                    FieldPeakID{iNeuron,iField} = Peakx;
+                    FieldSize  {iNeuron,iField} = sum(field(:));
+                    iField = iField +1;
+                end
                 Firingtmp(field) = NaN;
                 posmaptrial(:,field) = NaN;
                 if all(isnan(Firingtmp))
