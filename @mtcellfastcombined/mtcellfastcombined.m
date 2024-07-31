@@ -174,7 +174,7 @@ if(~isempty(dir(Args.RequiredFile)))
     
     %% Select place cell
     placecellPeakAmp   = 0.3; % Place cell criteria: peak amplitude must > 0.3 of maximum
-    placecellFieldMin  = 0.5; % Place cell criteria: field region > 0.3 of peak
+    placecellFieldMin  = 0.5; % Place cell criteria: field region > 0.5 of peak
     placecellInOut     = 3;   % Place cell criteria: In out activity ratio is 3
     placecellGoodtrial = 1/2; % Place cell criteria: Peak inside place field more that half of trials
 
@@ -420,9 +420,11 @@ if(~isempty(dir(Args.RequiredFile)))
         ts_decoded     = [];
         pos_decoded    = [];
         trial_decoded  = [];
+        bin_actual     = [];
         for i_Trial = 1:sessionData.nTrials
             ok_trial      =  trialNo_dsp_firemap == i_Trial;
             tsF_trial     =  tsF_firemap(ok_trial);
+            bin_trial     =  pos_trial_bin_dsp_firemap(ok_trial);
             spks_trial    =  spikes_firemap(:,ok_trial);
             Trial_bin     =  sum(ok_trial);
             TimewinNo     =  ceil(Trial_bin/tau_bin);
@@ -434,6 +436,7 @@ if(~isempty(dir(Args.RequiredFile)))
                 end
                 if (tsF_trial(ed) - tsF_trial(st)) < 1 % Time window span not exceed 1second
                     ts_decoded     =  cat(1, ts_decoded, mean(tsF_trial(st:ed)));
+                    bin_actual     =  cat(1, bin_actual, mode(bin_trial(st:ed)));
                     nowF           =  mean(spks_trial(:, st:ed),2)';
                     nowF_mat       =  repmat(nowF, Args.BinSize, 1);
                     % Key formula of Bayesian decoding: P(pos|nowf) -> Pspatial * (meanF(pos))^nowf * exp(-tau*f(pos))
@@ -446,6 +449,7 @@ if(~isempty(dir(Args.RequiredFile)))
         end
         %% Decoded error at even trials calculation
         pos_true    = 2.2 * interp1(tsF_firemap, pos_trial_bin_dsp_firemap, ts_decoded, 'linear'); % Real position at each decoded timepoint (cm)
+        pos_decoded_bin = pos_decoded;
         pos_decoded = 2.2 * pos_decoded; % cm
         ok_even = rem(trial_decoded,2) == 0;
         ok_odd  = rem(trial_decoded,2) == 1;
@@ -458,18 +462,23 @@ if(~isempty(dir(Args.RequiredFile)))
         pos_err_even_median_circ  = median(decoding_error_even_circ);
         pos_err = [pos_err_even_mean,pos_err_even_median,pos_err_even_mean_circ,pos_err_even_median_circ];
         pos_err_shuffle(ishuffle,:) = pos_err;
+        
+        pos_decoded_bin_shuffle(ishuffle,:) = pos_decoded_bin;
     end
     
-    BayeDecoding_shuffle.ts_decoded            = ts_decoded;
-    BayeDecoding_shuffle.pos_err_shuffle       = pos_err_shuffle;
-    BayeDecoding_shuffle.pos_err_shuffle_mean  = mean(pos_err_shuffle,1);
+    BayeDecoding_shuffle.ts_decoded                    = ts_decoded;
+    BayeDecoding_shuffle.bin_actual                    = bin_actual;
+    BayeDecoding_shuffle.pos_decoded_bin_shuffle       = pos_decoded_bin;
+    BayeDecoding_shuffle.pos_err_shuffle               = pos_err_shuffle;
+    BayeDecoding_shuffle.pos_err_shuffle_mean          = mean(pos_err_shuffle,1);
     
     data.BayeDecoding_shuffle = BayeDecoding_shuffle;
-    
+
+    %%
     % Pairwise correlation analysis
     trialNo       = session_data_raw_dsp(:,2);
     speed_downsample         = spd_downsample0';
-    %%
+
     ok_rest = ones(1,length(speed_downsample));
     spd_shift_1 = zeros(50,length(speed_downsample));
     spd_shift_2 = zeros(50,length(speed_downsample));
@@ -482,10 +491,10 @@ if(~isempty(dir(Args.RequiredFile)))
     ok_rest        =   ok_rest & ok_trial';
     ok_spd         =   speed_downsample > Args.ThresVel;
     ok_run         =   ok_trial & ok_spd' ;
-    %%
+    
     spikes_rest    =   spiketrain_all(:,ok_rest);
     spikes_run     =   spiketrain_all(:,ok_run);
-    %%
+    
     meanspks_all        = mean(spiketrain_all,2);
     meanspks_res        = mean(spikes_rest,2);
     meanspks_run        = mean(spikes_run,2);
@@ -510,8 +519,8 @@ if(~isempty(dir(Args.RequiredFile)))
     gofgauR_sym = cell(3,1);
     Cor_now     = [cr_all_vector cr_res_vector cr_run_vector]';
     for k = 1:3
-        MeanCor(k)    = mean(Cor_now(k,:));
-        MedianCor(k)  = median(Cor_now(k,:));
+        MeanCor(k)    = mean(Cor_now(k,:),'omitnan');
+        MedianCor(k)  = median(Cor_now(k,:),'omitnan');
         [N,~,~] = histcounts(Cor_now(k,:),'Normalization','probability','BinWidth',0.0005,'BinLimits',[-1,1]);
         X = -0.9995:0.0005:1;
         IDpeak0         = find(N  == max(N));
@@ -555,12 +564,416 @@ if(~isempty(dir(Args.RequiredFile)))
     if ok_rest == 0
         Xpeak_all(2) = NaN;
         FWHM_all(2) = NaN;
+        
     end
     
     data.Cor_Mspks.meanspikes   = [meanspks_all  meanspks_res  meanspks_run ]';
     data.Cor_Mspks.correlations = [cr_all_vector cr_res_vector cr_run_vector]';
     data.Cor_Mspks.Cor_GaussFit = [MeanCor; MedianCor; Xpeak_all; FWHM_all]';
     
+    idx = 1:size(cr_res,1)+1:numel(cr_res);
+    if sum(isnan(cr_res),'all') ~= 0
+        temp_arr = reshape(cr_res.',1,[]);
+        nan_list = find(isnan(temp_arr(idx)));
+        cr_res(nan_list,:) = 0;
+        cr_res(:,nan_list) = 0;
+    end
+    if sum(isnan(cr_run),'all') ~= 0
+        temp_arr = reshape(cr_run.',1,[]);
+        nan_list = find(isnan(temp_arr(idx)));
+        cr_run(nan_list,:) = 0;
+        cr_run(:,nan_list) = 0;
+    end
+    cr_res(idx) = 0;
+    cr_run(idx) = 0;
+    
+    data.Cor_Mspks.cr_res = cr_res;
+    data.Cor_Mspks.cr_run = cr_run;
+    
+    % Place-Non Place cell connectivity
+    temp_cell_list = 1:sessionData.nNeuron;
+    pc_list = PC_ID;
+    non_pc_list = temp_cell_list(~ismember(temp_cell_list,pc_list));
+    
+    % SIC list
+    SIC_list = [[1:size(SICVec,2)]' SICVec'];
+    SIC_list = sortrows(SIC_list,2);
+    
+    pc_cr_res = cr_res(pc_list,:);
+    nonpc_cr_res = cr_res(non_pc_list,:);
+    
+    pc_pc_cr_res = cr_res(pc_list,pc_list);
+    pc_nonpc_cr_res = cr_res(pc_list,non_pc_list);
+    
+    nonpc_nonpc_cr_res = cr_res(non_pc_list,non_pc_list);
+    nonpc_pc_cr_res = cr_res(non_pc_list,pc_list);
+    
+    high_SIC_list = SIC_list(SIC_list(:,2) > prctile(SIC_list(:,2),75),:);
+    low_SIC_list = SIC_list(SIC_list(:,2) < prctile(SIC_list(:,2),25),:);
+    
+    high_SIC_cr_res = cr_res(high_SIC_list(:,1),:);
+    low_SIC_cr_res = cr_res(low_SIC_list(:,1),:);
+    
+    high_high_SIC_cr_res = cr_res(high_SIC_list(:,1),high_SIC_list(:,1));
+    high_low_SIC_cr_res = cr_res(high_SIC_list(:,1),low_SIC_list(:,1));
+    
+    low_low_SIC_cr_res = cr_res(low_SIC_list(:,1),low_SIC_list(:,1));
+    low_high_SIC_cr_res = cr_res(low_SIC_list(:,1),high_SIC_list(:,1));
+    
+%     temp = proportion_pos_neg(proportion_pos_neg(:,3) > 0.5,1);
+    
+    MeanCor_all = zeros(1,12);
+    MedianCor_all = zeros(1,12);
+    FWHM_all = zeros(1,12);
+    
+    % PC to all; Non-PC to all; High SIC to all; Low SIC to all
+    % PC to PC; PC to Non-PC; High SIC to High SIC; High SIC to Low SIC
+    % Non-PC to Non-PC; Non-PC to PC; Low SIC to Low SIC; Low SIC to High SIC
+    
+    if true
+%     figure;
+%     subplot(3,2,1)
+    Cor_now = reshape(pc_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(1) = MeanCor;
+    MedianCor_all(1) = MedianCor;
+    FWHM_all(1) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(nonpc_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(2) = MeanCor;
+    MedianCor_all(2) = MedianCor;
+    FWHM_all(2) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("PC-Non PC")
+%     hold off
+    
+%     subplot(3,2,2)
+    Cor_now = reshape(high_SIC_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(3) = MeanCor;
+    MedianCor_all(3) = MedianCor;
+    FWHM_all(3) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(low_SIC_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(4) = MeanCor;
+    MedianCor_all(4) = MedianCor;
+    FWHM_all(4) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("SIC")
+%     hold off
+    
+%     subplot(3,2,3)
+    Cor_now = reshape(pc_pc_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(5) = MeanCor;
+    MedianCor_all(5) = MedianCor;
+    FWHM_all(5) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(pc_nonpc_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(6) = MeanCor;
+    MedianCor_all(6) = MedianCor;
+    FWHM_all(6) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("PC")
+%     hold off
+    
+%     subplot(3,2,4)
+    Cor_now = reshape(high_high_SIC_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(7) = MeanCor;
+    MedianCor_all(7) = MedianCor;
+    FWHM_all(7) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(high_low_SIC_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(8) = MeanCor;
+    MedianCor_all(8) = MedianCor;
+    FWHM_all(8) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("High SIC")
+%     hold off
+
+%     subplot(3,2,5)
+    Cor_now = reshape(nonpc_nonpc_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(9) = MeanCor;
+    MedianCor_all(9) = MedianCor;
+    FWHM_all(9) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(nonpc_pc_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(10) = MeanCor;
+    MedianCor_all(10) = MedianCor;
+    FWHM_all(10) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("Non PC")
+%     hold off
+    
+%     subplot(3,2,6)
+    Cor_now = reshape(low_low_SIC_cr_res.',1,[]); % Red
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now);
+    MeanCor_all(11) = MeanCor;
+    MedianCor_all(11) = MedianCor;
+    FWHM_all(11) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.4660 0.6740 0.1880]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.4660 0.6740 0.1880]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'EdgeColor',[0.6350 0.0780 0.1840],'FaceColor',[0.6350 0.0780 0.1840], ...
+%         'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     xline(MedianCor,'Color',[0.6350 0.0780 0.1840],'LineStyle','--');
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+    Cor_now = reshape(low_high_SIC_cr_res.',1,[]); % Blue
+    [MeanCor,MedianCor,FWHM,IDpeak,xLeft_sym,Leftfit_sym,xRight_sym,Rightfit_sym] = FWHM_compute(Cor_now); % Blue
+    MeanCor_all(12) = MeanCor;
+    MedianCor_all(12) = MedianCor;
+    FWHM_all(12) = FWHM;
+    %         plot(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak),'Color',[0.9290 0.6940 0.1250]);hold on;
+    %         plot(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end),'Color',[0.9290 0.6940 0.1250]);hold on;
+%     area(xLeft_sym(1:IDpeak),Leftfit_sym(1:IDpeak), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     hold on
+%     area(xRight_sym(round(length(xRight_sym)/2):end),Rightfit_sym(round(length(xRight_sym)/2):end), ...
+%         'EdgeColor',[0.3010 0.7450 0.9330],'FaceColor',[0.3010 0.7450 0.9330],'FaceAlpha',0.5,'LineWidth',2);
+%     %     plot(X,N,'k');xlim([-0.1,0.1])
+%     hold on
+%     xline(MedianCor,'Color',[0.3010 0.7450 0.9330],'LineStyle','--');
+%     xlim([-0.1,0.1])
+%     xlabel("Correlation Coefficient",'FontSize',18); ylabel("Normalised density",'FontSize',18);
+%     title("Low SIC")
+%     hold off
+    end
+    
+    data.Cor_Mspks.MeanCor_all = MeanCor_all;
+    data.Cor_Mspks.MedianCor_all = MedianCor_all;
+    data.Cor_Mspks.FWHM_all = FWHM_all;
+    
+    for loop_pc_non_pc = 1:5
+        
+        switch loop_pc_non_pc
+            case 1 % All cells
+                cr_res_temp = cr_res;
+                cr_run_temp = cr_run;
+            case 2 % PC-PC
+                cr_res_temp = cr_res(pc_list,pc_list);
+                cr_run_temp = cr_run(pc_list,pc_list);
+            case 3 % non PC-non PC
+                cr_res_temp = cr_res(non_pc_list,non_pc_list);
+                cr_run_temp = cr_run(non_pc_list,non_pc_list);
+            case 4 % PC-non PC
+                cr_res_temp = cr_res(pc_list,non_pc_list);
+                cr_run_temp = cr_run(pc_list,non_pc_list);
+            case 5 % non PC-PC
+                cr_res_temp = cr_res(non_pc_list,pc_list);
+                cr_run_temp = cr_run(non_pc_list,pc_list);
+        end
+        
+        k_values = zeros(2,6);
+        % figure;
+        for loop_links = 1:6
+%             subplot(3,2,loop_links)
+            if loop_links == 1 | loop_links == 3 | loop_links == 5
+                network = cr_res_temp;
+                % link_dist = sortrows([[1:size(network,1)]' sum(network)'],2);
+                proportion_pos_neg = zeros(size(network,1),6);
+                for i = 1:size(network,1)
+                    proportion_pos_neg(i,1) = i;
+                    proportion_pos_neg(i,2) = sum(network(i,:));% Sum of all links
+                    proportion_pos_neg(i,3) = sum(network(i,:) > 0) / size(network,2); % Proportion of positive links
+                    proportion_pos_neg(i,4) = sum(network(i,network(i,:) > 0)); % Sum of positive links
+                    proportion_pos_neg(i,5) = sum(network(i,:) < 0) / size(network,2); % Proportion of negative links
+                    proportion_pos_neg(i,6) = sum(network(i,network(i,:) < 0)); % Sum of positive links
+                end   
+                rest_proportion_pos_neg = proportion_pos_neg;
+                
+            elseif loop_links == 2 | loop_links == 4 | loop_links == 6
+                network = cr_run_temp;
+                % link_dist = sortrows([[1:size(network,1)]' sum(network)'],2);
+                proportion_pos_neg = zeros(size(network,1),6);
+                for i = 1:size(network,1)
+                    proportion_pos_neg(i,1) = i;
+                    proportion_pos_neg(i,2) = sum(network(i,:));% Sum of all links
+                    proportion_pos_neg(i,3) = sum(network(i,:) > 0) / size(network,2); % Proportion of positive links
+                    proportion_pos_neg(i,4) = sum(network(i,network(i,:) > 0)); % Sum of positive links
+                    proportion_pos_neg(i,5) = sum(network(i,:) < 0) / size(network,2); % Proportion of negative links
+                    proportion_pos_neg(i,6) = sum(network(i,network(i,:) < 0)); % Sum of positive links
+                end
+                run_proportion_pos_neg = proportion_pos_neg;
+            end
+                        
+            if loop_links == 1 | loop_links == 2 % All
+                link_dist = sortrows(proportion_pos_neg(:,[1 2]),2);
+            elseif loop_links == 3 | loop_links == 4 % Positive
+                link_dist = sortrows(proportion_pos_neg(:,[1 4]),2);
+            elseif loop_links == 5 | loop_links == 6 % Negative
+                link_dist = sortrows(proportion_pos_neg(:,[1 6]),2);
+                link_dist(:,2) = link_dist(:,2) * -1; % If negative
+            end
+            [N,edges] = histcounts(link_dist(:,2),0:0.2:max(link_dist(:,2))+0.2,'Normalization','probability');
+            k_mean = mean(link_dist(:,2),'omitnan');
+            k_median = median(link_dist(:,2),'omitnan');
+            k_values(1,loop_links) = k_mean;
+            k_values(2,loop_links) = k_median;
+            % [N,edges] = histcounts(link_dist(:,2),0:5:max(link_dist(:,2)+5),'Normalization','probability'); %1:max(link_dist(:,2))+1
+            degree_dist = [[0:0.2:max(link_dist(:,2))]' N'];
+            
+%             bar(edges(1:end-1),degree_dist(:,2));
+%             xline(k_mean,'k--');
+%             xline(k_median,'r--');
+            %     loglog(degree_dist(:,2),'x');
+%             if loop_links == 1
+%                 title("Resting (All links)")
+%             elseif loop_links == 2
+%                 title("Running (All links)")
+%             elseif loop_links == 3
+%                 title("Resting (Positive links)")
+%             elseif loop_links == 4
+%                 title("Running (Positive links)")
+%             elseif loop_links == 5
+%                 title("Resting (Negative links)")
+%             elseif loop_links == 6
+%                 title("Running (Negative links)")
+%             end
+        end
+        
+        switch loop_pc_non_pc
+            case 1 % All cells
+                data.Cor_Mspks.links.all.rest_proportion_pos_neg = rest_proportion_pos_neg;
+                data.Cor_Mspks.links.all.run_proportion_pos_neg = run_proportion_pos_neg;
+                data.Cor_Mspks.links.all.k_values = k_values;
+            case 2 % PC-PC
+                data.Cor_Mspks.links.pc_pc.rest_proportion_pos_neg = rest_proportion_pos_neg;
+                data.Cor_Mspks.links.pc_pc.run_proportion_pos_neg = run_proportion_pos_neg;
+                data.Cor_Mspks.links.pc_pc.k_values = k_values;
+            case 3 % non PC-non PC
+                data.Cor_Mspks.links.nonpc_nonpc.rest_proportion_pos_neg = rest_proportion_pos_neg;
+                data.Cor_Mspks.links.nonpc_nonpc.run_proportion_pos_neg = run_proportion_pos_neg;
+                data.Cor_Mspks.links.nonpc_nonpc.k_values = k_values;
+            case 4 % PC-non PC
+                data.Cor_Mspks.links.pc_nonpc.rest_proportion_pos_neg = rest_proportion_pos_neg;
+                data.Cor_Mspks.links.pc_nonpc.run_proportion_pos_neg = run_proportion_pos_neg;
+                data.Cor_Mspks.links.pc_nonpc.k_values = k_values;
+            case 5 % non PC-PC
+                data.Cor_Mspks.links.nonpc_pc.rest_proportion_pos_neg = rest_proportion_pos_neg;
+                data.Cor_Mspks.links.nonpc_pc.run_proportion_pos_neg = run_proportion_pos_neg;
+                data.Cor_Mspks.links.nonpc_pc.k_values = k_values;
+        end
+        
+    end
+    
+    
+    %%
     % create nptdata so we can inherit from it
     data.numSets = 1;
     data.Args = Args;

@@ -11,7 +11,8 @@ function [r,varargout] = get(obj,varargin)
 
 Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'FiringRateMapRaw',0, 'FiringRateMapAdSm',0, ...
               'BinFiringRate',0, 'TrialBinFiringRate',0, 'Baseline',0, 'GMM',0, 'TrialFits',0, 'AlphaAdSm',0, ...
-              'FluorescenceTrace',0, 'TrialFluorescenceTrace',0, 'PlaceFieldPositionEntropy',0);
+              'FluorescenceTrace',0, 'TrialFluorescenceTrace',0, 'PlaceFieldPositionEntropy',0,'PopVec',0, ...
+              'RestRunCorrDist',0,'Links',0,'Corr',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -31,6 +32,10 @@ elseif(Args.TrialFluorescenceTrace)
     r = obj.data.nTrials;
 elseif (Args.TrialBinFiringRate | Args.TrialFits)
     r = obj.data.nTrials*obj.data.nNeuron;
+elseif(Args.PopVec)
+    r = obj.data.Args.BinSize;
+elseif(Args.Links)
+    r = 5;
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way

@@ -12,7 +12,8 @@ function [r,varargout] = get(obj,varargin)
 Args = struct('ObjectLevel',0, 'AnalysisLevel',0, 'VelRaw',0, 'TrialVelRaw', 0, 'TrialVel',0, 'Vel',0, ...
               'TrialVelFilt',0, 'VelBinned',0, 'VelCount',0, 'WaterLick',0, 'TrialWaterLick',0, ...
               'LickDistribution',0, 'TrialLickDistribution',0, 'LickBinned',0, 'TrialLickBinned',0, ...
-              'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ',0, 'LickBurst',0, 'TrialLickBurst',0);
+              'LickRate',0, 'TrialLickRate',0, 'TrialLick',0, 'LickRZ',0, 'LickBurst',0, 'TrialLickBurst',0, ...
+              'AnticipatoryLick',0,'SummaryPlot',0,'TrialdFF0',0,'PopVec',0,'FRVel',0);
 Args.flags ={'ObjectLevel','AnalysisLevel'};
 Args = getOptArgs(varargin,Args);
 
@@ -27,8 +28,12 @@ elseif(Args.AnalysisLevel)
 	r = 'Single';
 elseif (Args.TrialVelRaw | Args.TrialVel | Args.TrialVelFilt | Args.TrialWaterLick | ...
         Args.TrialLickDistribution | Args.TrialLickBinned | Args.TrialLickRate | Args.TrialLick | ...
-        Args.TrialLickBurst)
-    r = obj.data.nTrials;
+        Args.TrialLickBurst | Args.AnticipatoryLick | Args.SummaryPlot | Args.TrialdFF0)
+    r = obj.data.nTrials + 50;
+elseif (Args.PopVec)
+    r = obj.data.Args.BinSize;
+elseif (Args.FRVel)
+    r = obj.data.nNeuron;
 else
 	% if we don't recognize and of the options, pass the call to parent
 	% in case it is to get number of events, which has to go all the way
